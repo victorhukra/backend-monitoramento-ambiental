@@ -1,18 +1,21 @@
-# Previsão de chuva com meteorologia e GOES
+# Previsão de chuva em Londrina
 
-Projeto de pesquisa para investigar o ganho de informações GOES na previsão de chuva em Londrina, nos horizontes candidatos de 1, 3, 6 e 7 horas. Há auditoria, EDA, piloto e testes; ainda não há target definitivo, região geográfica validada ou modelo treinado. Consulte [STATUS.md](STATUS.md) e os documentos em `reports/temporal/`.
+Nosso objetivo é construir um MVP que receba dados meteorológicos e estime **se vai chover na próxima hora**. A equipe quer integrar dados → modelo → API → banco → tela, com código simples e compreensível.
 
-## Política do repositório
+## Onde estamos
 
-**Somente código e documentação. Nenhum NPZ, ZIP, CSV, resultado binário ou ambiente local deve ser versionado, nem mesmo a amostra.** Não usamos Git LFS para os dados. `.gitignore` nega arquivos por padrão e permite Python, Markdown e configurações explicitamente selecionadas. Dados/ambientes continuam bloqueados dentro de suas pastas.
+- Auditoria e análise exploratória dos dados concluídas.
+- Tabela experimental preparada: **59.159 registros**, com temperatura, umidade, pressão e nebulosidade como entradas.
+- Contratos de integração documentados para as equipes.
+- **Próximo passo:** revisar a tabela juntos e escolher os períodos de treino, validação e teste.
 
-O acervo disponível é um ZIP de aproximadamente 79,2 GB (cerca de 73,8 GiB) contendo 59.033 NPZ. Não é uma única matriz de 73 GB. Não descompacte tudo. O script também aceita um NPZ individual pequeno; rejeita um NPZ gigante em vez de tentar carregá-lo na memória.
+Ainda não há modelo treinado, API em execução ou integração com banco e tela. As imagens GOES ficam para uma evolução futura; você não precisa baixar o acervo de imagens para trabalhar no MVP atual.
 
-`.gitignore` não remove arquivos já rastreados e pode ser contornado com `git add -f`. Por isso, ative o hook e execute a verificação do índice antes de qualquer commit/push. Hooks locais também podem ser contornados; a equipe deve exigir revisão e não usar `--no-verify`. Nenhuma proteção local é uma garantia contra alguém que a desative. Revise segredos inseridos em código/documentação: o verificador limita tipos/tamanho, não detecta todos os segredos possíveis.
+**Limitação importante:** adotamos a hipótese de que a chuva registrada em T+1h representa a hora seguinte a T. Essa interpretação e a disponibilidade dos dados no instante da previsão ainda precisam de confirmação na origem. Por enquanto, o estudo é histórico e experimental.
 
-## 1. Clonar e instalar
+## 1. Preparar o ambiente
 
-Git e Python 3.12 são necessários. Repositório privado: é necessário que o proprietário conceda acesso à sua conta:
+Você precisa de **Git, Python 3.12 e acesso ao repositório privado**. No terminal PowerShell:
 
 ```powershell
 git clone https://github.com/victorhukra/backend-monitoramento-ambiental.git
@@ -22,118 +25,96 @@ py -3.12 -m venv .venv
 python -m pip install -r requirements.txt
 git config core.hooksPath .githooks
 Copy-Item .env.example .env
+```
+
+Se já tem o projeto, use sua pasta existente. Copie `.env.example` somente se ainda não tiver `.env`, para preservar seus caminhos locais.
+
+No Linux/macOS, use `python3 -m venv .venv`, `source .venv/bin/activate` e `cp .env.example .env`. Os comandos Python seguintes são iguais.
+
+As dependências principais são pandas, NumPy e Matplotlib. As versões estão em `requirements.txt`; a instalação limpa dessas versões ainda precisa ser validada em outra máquina.
+
+## 2. Indicar onde está o CSV
+
+Solicite à equipe o arquivo `dataset_weather.csv`: ele **não vem no GitHub**. Guarde-o fora do repositório, por exemplo em `D:/dados-goes/`, e ajuste estas linhas no seu `.env`:
+
+```dotenv
+WEATHER_CSV_PATH=D:/dados-goes/dataset_weather.csv
+WEATHER_TRAINING_PATH=data/processed/weather_training.csv
+```
+
+Substitua o caminho pelo da sua máquina. Caminhos relativos partem da raiz do projeto. As opções GOES do `.env` podem ficar como estão para esta etapa.
+
+## 3. Preparar a tabela
+
+Na raiz do projeto, com o ambiente ativo:
+
+```powershell
+python -B scripts/prepare_weather.py --plot
+```
+
+O script lê o CSV original, associa cada horário à chuva de **exatamente uma hora depois** e grava os resultados em `data/processed/`:
+
+| Arquivo | Para que serve |
+|---|---|
+| `weather_training.csv` | Quatro entradas, horário de referência, horário do alvo e classe de chuva |
+| `weather_training.json` | Contagens, parâmetros e identificação da fonte |
+| `weather_training_excluded.csv` | Linhas que não puderam entrar e seus motivos |
+| `weather_training_preview.csv` | Dez primeiras linhas para conferência |
+| `weather_training.png` | Gráfico das quantidades com e sem chuva |
+
+O original permanece intacto. O script não divide períodos nem treina um modelo. Sem `--plot`, não gera o gráfico.
+
+**Se a tabela já existe, não é necessário gerá-la novamente.** O script evita sobrescritas; para uma nova versão, use `--output data/processed/weather_training_v2.csv`.
+
+Entenda cada passo em [Preparação da tabela](docs/prepare_weather.md). Para nossa próxima conversa, siga o [guia de revisão e escolha dos períodos](reports/project/revisao_tabela_e_periodos.md).
+
+## 4. Executar os testes
+
+```powershell
 python -B -m unittest discover -s tests -v
 ```
 
-Linux/macOS: use `python3 -m venv .venv`, `source .venv/bin/activate` e `cp .env.example .env`. Se necessário, `chmod +x .githooks/pre-commit`. Os comandos de instalação e testes seguintes são os mesmos. Não é necessário obter dados reais para os testes unitários.
+Os testes usam exemplos pequenos e não exigem o CSV real nem as imagens GOES.
 
-As versões diretas estão em `requirements.txt`; dependências transitivas não têm lockfile. A instalação limpa dessas versões ainda precisa ser validada pela equipe. Nesta máquina os testes usaram Python 3.12.14, NumPy 2.3.5 e pandas 3.0.1; os pins da EDA são NumPy 2.5.4, pandas 3.0.1 e Matplotlib 3.11.2. Não foram instaladas novas bibliotecas nesta preparação.
+## Onde encontrar cada coisa
 
-## 2. Configurar dados locais
+| Local | Conteúdo |
+|---|---|
+| `config.py` | Caminhos, fuso e nomes das quatro entradas |
+| `scripts/prepare_weather.py` | Preparação da tabela do MVP |
+| `tests/` | Verificações do código |
+| `docs/integration/` | Contratos para Backend, Front-end e Banco |
+| `reports/project/` | Propostas e guia para as próximas decisões |
+| `src/data/` | Auditoria, análise exploratória e investigação da origem |
+| `src/features/` | Investigação e piloto GOES |
+| `data/` | Dados e resultados locais, ignorados pelo Git |
 
-Edite `.env`, que nunca deve ser commitado. `config.py` lê esse arquivo; variáveis já definidas no processo têm prioridade. Caminhos relativos usam a raiz do projeto. Use valores literais, sem expansão `${...}`, comandos de shell ou comentários no final da linha.
+Para alinhar as equipes: [Backend](docs/integration/backend.md), [Front-end](docs/integration/frontend.md) e [Banco de Dados](docs/integration/database.md). Esses documentos são contratos propostos; não significam que os serviços já estejam implementados. A tabela `predictions` proposta para o banco guarda previsões da API e é diferente da tabela de treinamento.
 
-```dotenv
-DATASET_MODE=sample
-SAMPLE_PATH=data/sample/sample.npz
-FULL_DATASET_PATH=D:/dados-goes/dataset_goes.zip
-WEATHER_CSV_PATH=D:/dados-goes/dataset_weather.csv
-DATASET_README_PATH=D:/dados-goes/README.md
-GOES_MEMBER=
-```
+## Colaborar sem misturar as tarefas
 
-Preferência: armazenar o acervo fora do clone, em uma pasta como `D:/dados-goes/` ou `/dados/goes/`. Alternativamente, coloque o ZIP, CSV e README original em `data/raw/`, que é totalmente ignorada. Não copie os dados para `src/`, `docs/` ou `reports/`. Os diretórios locais são criados conforme necessário e não precisam existir no clone.
-
-## 3. Gerar e usar a amostra
-
-Quem possui o ZIP executa:
-
-```powershell
-python scripts/make_sample.py
-python scripts/check_dataset.py
-```
-
-O gerador escolhe deterministicamente o primeiro nome NPZ ordenado no ZIP, preserva seus bytes e metadados e grava `data/sample/sample.npz`. Pode escolher outro membro com `--member "dataset_goes/samples/.../nome.npz"`. Também aceita `--source caminho/arquivo.npz` e `--output caminho/amostra.npz`.
-
-Não extrai o ZIP inteiro, não sobrescreve fonte/destino existente e exige amostra menor que 50.000.000 bytes. Usa o leitor validado do piloto: limite externo de 32 MiB por NPZ e expansão interna de 128 MiB. Recusa matriz totalmente inválida ou metadados incompatíveis; não procura silenciosamente outra imagem. O limite de arquivo não é garantia de pico de RAM inferior a 50 MB.
-
-**Amostra é uma imagem inteira, não recorte de Londrina nem conjunto representativo de treinamento.** Isso preserva a geografia ainda não comprovada. A amostra real gerada nesta preparação tem 1.455.519 bytes e fica ignorada pelo Git.
-
-Quem não possui o acervo pode executar os testes sintéticos imediatamente. Para o smoke test real, solicite `sample.npz` por armazenamento externo autorizado da equipe e coloque-o em `data/sample/`. Não existe URL pública de dados configurada nem download automático. Confira com o responsável a autorização de distribuição.
-
-## 4. Alternar para a fonte completa
-
-Mude `DATASET_MODE=full` e execute `python scripts/check_dataset.py`. Isso verifica **uma imagem** da fonte completa, não processa o acervo inteiro. `GOES_MEMBER` seleciona um membro específico; vazio usa o primeiro nome ordenado.
-
-A configuração nova alimenta os utilitários de desenvolvimento. Os scripts científicos anteriores mantêm seus argumentos explícitos e não passam a aceitar `sample.npz` como se fosse o ZIP/CSV completo. Exemplo de auditoria, com saída local separada:
-
-```powershell
-python src/data/audit.py --csv D:/dados-goes/dataset_weather.csv --zip D:/dados-goes/dataset_goes.zip --readme D:/dados-goes/README.md --output data/local-reports/audit
-```
-
-EDA, piloto e viabilidade dependem de resultados de etapas anteriores, inclusive JSON/CSV locais deliberadamente excluídos do Git. Um clone contém a documentação histórica, não todos os insumos desses scripts. Para reproduzir a cadeia, gere auditoria, EDA e piloto em ordem, seguindo [o guia histórico](docs/history/README_pre_github.md). Alguns scripts escrevem relatórios Markdown em caminhos fixos; faça reexecuções em branch própria e revise diferenças antes de commitá-las. Não execute `provenance_inventory.py` sem ajustar seus caminhos locais explícitos.
-
-## 5. Estrutura
-
-```text
-config.py                  configuração dos utilitários
-scripts/make_sample.py     geração local de uma amostra
-scripts/check_dataset.py   verificação de uma imagem na fonte selecionada
-scripts/check_staged.py    validação do índice antes do commit
-src/data/                  auditoria, EDA, viabilidade e proveniência
-src/features/              reconstrução GOES e piloto
- tests/                    testes artificiais; não exigem acervo
-reports/                   documentação histórica Markdown versionável
- docs/history/             documentação anterior preservada
- data/                     somente local, ignorado
-.env.example               exemplo sem credenciais
-.githooks/pre-commit        hook que chama o verificador
-```
-
-## 6. Primeiro commit e publicação (referência histórica)
-
-Os comandos abaixo devem ser executados **na raiz `projeto-goes`**, não em Downloads ou na pasta que contém o dataset. A preparação não criou commit nem remoto e não fez push. Crie primeiro um repositório vazio no GitHub, sem inicializar README/licença, e substitua nome, email e URL pelos seus valores:
-
-```powershell
-git init -b main
-git config user.name "SEU NOME"
-git config user.email "SEU EMAIL"
-git config core.hooksPath .githooks
-git add .gitignore .gitattributes .env.example .githooks config.py scripts src tests requirements.txt README.md STATUS.md docs reports
-git update-index --chmod=+x .githooks/pre-commit
-git status --short
-git diff --cached --stat
-python scripts/check_staged.py
-if ($LASTEXITCODE -ne 0) { throw "Índice bloqueado; não fazer commit" }
-git diff --cached
-# Revise a lista e o conteúdo antes de prosseguir.
-git commit -m "chore: preparar projeto de pesquisa para colaboração"
-git remote add origin https://github.com/victorhukra/backend-monitoramento-ambiental.git
-git push -u origin main
-```
-
-Use autenticação do Git Credential Manager ou SSH; nunca escreva token no remoto, README ou `.env.example`. Caso já exista histórico com dados, pare antes do push: `.gitignore` não apaga blobs antigos. Se apenas estiverem no índice antes do primeiro commit, use `git rm --cached -- caminho/exato` e rode a verificação novamente; isso preserva o arquivo local. Não foi encontrado repositório Git prévio nesta raiz durante a preparação.
-
-## 7. Fluxo da equipe
-
-`main` contém código revisado. Cada tarefa usa `feature/nome-curto` (ou `fix/nome-curto`). Após clonar, cada pessoa deve ativar `.githooks` e seu ambiente Python.
+Use `main` para código revisado e uma branch `feature/nome-curto` para cada tarefa:
 
 ```powershell
 git switch main
 git pull --ff-only
 git switch -c feature/nome-curto
-# Faça as alterações.
-python -B -m unittest discover -s tests -v
+# Faça suas alterações e execute os testes.
 git add caminho/do/arquivo.py
 python scripts/check_staged.py
-if ($LASTEXITCODE -ne 0) { throw "Índice bloqueado" }
+# Só continue se a verificação passar; confira o conteúdo abaixo.
 git diff --cached
 git commit -m "feat: descrever a alteração"
 git push -u origin feature/nome-curto
 ```
 
-Abra um Pull Request para `main` e peça revisão de outra pessoa. Configure no GitHub proteção de `main` com PR/revisão obrigatórios; isso é recomendação, ainda não configurada. Não faça force-push em branches compartilhadas. Cada pessoa mantém seus próprios caminhos/dados em `.env`. Documente mudanças de protocolo antes de implementar tratamento, target ou modelagem.
+Abra um Pull Request para `main` e peça a revisão de um colega. Cada pessoa mantém seus próprios caminhos no `.env`.
 
-## Origem do repositório
+**No Git entram somente código e documentação.** CSV, NPZ, ZIP, amostras, resultados gerados, ambientes e credenciais ficam fora. O `.gitignore` e o hook ajudam a conferir isso; não use `git add -f` para incluir dados nem desative o hook para contornar uma rejeição. Tokens e senhas nunca devem entrar no código ou na documentação.
 
-O repositório remoto existente já continha um commit com a documentação do dataset. Essa documentação foi preservada em [docs/dataset/README.md](docs/dataset/README.md), sem reescrever o histórico. Para colaborar neste repositório, use o fluxo de clone e branches; os comandos de inicialização acima são referência para uma publicação nova.
+## Material de apoio
+
+- [Estado detalhado e histórico do projeto](STATUS.md).
+- [README original do dataset](docs/dataset/README.md), preservado.
+- [Utilitários GOES](docs/goes_development.md): amostra local e leitura seletiva, para quem precisar investigar imagens. O acervo tem cerca de 73,8 GiB; não descompacte tudo.
+- [Documentação histórica](docs/history/README_pre_github.md): reprodução das análises anteriores. Alguns resultados locais citados não acompanham o clone.

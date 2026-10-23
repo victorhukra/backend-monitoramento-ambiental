@@ -3,6 +3,9 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+# As mesmas quatro entradas do contrato /predict. Horários e alvo não entram em X.
+WEATHER_FEATURES = ('temperature_2m', 'relative_humidity_2m', 'pressure_msl', 'cloud_cover')
+WEATHER_TIMEZONE = 'America/Sao_Paulo'
 
 
 def settings():
@@ -27,5 +30,6 @@ def settings():
     return dict(mode=mode, sample=path('SAMPLE_PATH','data/sample/sample.npz'),
                 full=path('FULL_DATASET_PATH','data/raw/dataset_goes.zip'),
                 csv=path('WEATHER_CSV_PATH','data/raw/dataset_weather.csv'),
+                training=path('WEATHER_TRAINING_PATH','data/processed/weather_training.csv'),
                 readme=path('DATASET_README_PATH','data/raw/README.md'),
                 member=values.get('GOES_MEMBER','').strip())

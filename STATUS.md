@@ -1,5 +1,13 @@
 # STATUS — Preparação para colaboração no GitHub
 
+## Atualização do MVP — 22/10/2026
+
+Implementada a primeira preparação meteorológica com refatoração mínima: constantes de entradas/fuso e caminho de saída em `config.py`, script comentado `scripts/prepare_weather.py`, oito testes novos e guia em `docs/prepare_weather.md`. Auditoria, EDA, GOES e contratos anteriores foram preservados.
+
+A tabela local tem **59.159 linhas**, quatro entradas meteorológicas e alvo experimental de chuva na próxima hora: **10.120 positivos e 49.039 negativos**. Uma linha foi excluída por ausência do timestamp futuro. O CSV original não mudou. Hipótese explícita: rain(u) representa a hora anterior; essa semântica local ainda não foi comprovada na origem. Portanto, agora há um alvo experimental, sem afirmar alvo científico definitivo ou disponibilidade operacional.
+
+Foram gerados CSV de treinamento, JSON de rastreabilidade, CSV de exclusões, prévia de dez linhas e gráfico de classes, todos ignorados pelo Git. **38 testes passaram** e todas as associações futuras foram conferidas independentemente. Não houve divisão temporal, treinamento, imputação, normalização ou push nesta etapa. Próximo passo: definir períodos cronológicos e preparar o primeiro treino usando somente as quatro entradas. O conteúdo abaixo registra a preparação anterior do repositório.
+
 **Atualizado em 21/10/2026.** Este documento substitui o resumo da raiz; o retrato anterior está preservado em [docs/history/STATUS_pre_github.md](docs/history/STATUS_pre_github.md).
 
 ## Resumo geral
