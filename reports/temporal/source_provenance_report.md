@@ -64,3 +64,18 @@ Separar dois impedimentos: a semântica do intervalo impede construir **alvos de
 `python -B src/data/provenance_inventory.py`, da raiz do projeto, reproduz o inventário e lê somente metadados de três NPZ selecionados por critérios fixos. Caminhos de entrada estão explícitos no script e no manifesto. O payload NPZ é lido em memória, mas `cmi_c13_raw` não é materializado; não há inspeção nova de pixels. Arquivos pequenos têm SHA-256 antes/depois; ZIP tem tamanho/mtime, não hash integral. Fontes inalteradas nesta verificação. Relatórios históricos e funções anteriores não foram editados.
 
 Não foram adicionadas funções de transformação ou elegibilidade. O diagnóstico é um script independente, com validações explícitas de tamanho de membro, escalar e limite de três combinações. A suíte existente foi executada; resultado em `tests.txt`.
+
+## Evidência adicional — semântica das variáveis na Open-Meteo
+
+**Verificação realizada em:** 27/10/2026
+**Fonte:** [Open-Meteo — Historical Weather API](https://open-meteo.com/en/docs/historical-weather-api)
+
+A documentação oficial descreve a variável horária `rain` como a precipitação líquida acumulada durante a hora anterior ao horário indicado. Também descreve `temperature_2m`, `relative_humidity_2m`, `pressure_msl` e `cloud_cover` como valores instantâneos.
+
+Essa definição é compatível com a hipótese adotada na preparação da tabela: utilizar `rain` no horário `t+1` para determinar se houve chuva no intervalo seguinte a `t`.
+
+**Limitação da evidência:** a documentação da API confirma a semântica da variável quando obtida por esse serviço, mas não comprova que o CSV analisado tenha sido exportado exatamente desse endpoint, com esses parâmetros e essa configuração. A requisição original, o modelo meteorológico selecionado e o fuso horário da exportação ainda precisam ser identificados.
+
+**Implicação para o projeto:** a hipótese temporal é compatível com a documentação oficial, mas permanece condicional à confirmação da procedência do arquivo. A utilização de dados históricos de reanálise também não comprova a disponibilidade das mesmas entradas no momento de uma previsão operacional.
+
+**Status:** evidência documental obtida; procedência específica do CSV e viabilidade operacional ainda não confirmadas.

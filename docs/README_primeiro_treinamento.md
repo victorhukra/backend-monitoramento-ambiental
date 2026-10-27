@@ -1,357 +1,354 @@
 # Primeiro treinamento do MVP meteorológico de Londrina
 
-Guia de implementação e passagem de responsabilidade — **26/10/2026**.
+Guia de implementação, resultados experimentais e passagem de responsabilidade — **27/10/2026**.
 
-**Escopo decidido:** somente dados meteorológicos tabulares. Imagens ficam fora deste fluxo e não são pré-requisito. Não precisamos implementar API, banco ou tela para treinar.
+**Escopo:** experimento retrospectivo com dados meteorológicos tabulares. Imagens GOES ficam fora deste fluxo e não são pré-requisito. O treinamento não exige implementar API, banco de dados ou interface.
 
-**Estado verificado:** existe preparação de dados e tabela experimental; não existem divisão cronológica executada, `scripts/train.py` ou modelo treinado. Este guia é documentação: propostas abaixo dependem de decisão da equipe, não são configurações aprovadas nem funcionalidades implementadas.
+**Estado verificado:** preparação dos dados, divisão cronológica, treinamento, avaliação da validação e do teste, salvamento e recarga dos modelos foram realizados. Os artefatos da execução estão em `data/experiments/weather_20261027T173216Z/`. Os 42 testes automatizados passaram no ambiente limpo de validação.
 
-## 1. Objetivo e primeira entrega
+**Limitação central:** o experimento técnico foi concluído, mas a semântica temporal exata da variável `rain` no arquivo original e a disponibilidade operacional das entradas no instante da previsão ainda não foram comprovadas. Os resultados não devem ser interpretados como comprovação de desempenho em tempo real.
 
-Usar quatro medidas meteorológicas do horário T para estimar se haverá chuva na próxima hora em Londrina. É uma classificação binária: resposta **0 (sem chuva)** ou **1 (com chuva)**, acompanhada de uma probabilidade estimada.
+## 1. Objetivo e escopo
 
-A primeira entrega deve ser pequena: uma tabela conferida, períodos documentados, uma referência simples de comparação, um Random Forest, métricas e um modelo salvo que possa ser carregado novamente. Não incluir busca extensa de parâmetros, novas variáveis, infraestrutura de experimentos ou serviços nesta entrega.
+O experimento utiliza quatro medidas meteorológicas do horário de referência T para estimar se haverá chuva na hora seguinte em Londrina.
 
-**Experimento retrospectivo** significa testar com dados históricos disponíveis hoje. Isso não demonstra que os mesmos valores estavam acessíveis quando a previsão teria sido emitida. O README do dataset declara dados de modelos/reanálises da Open-Meteo, não medições diretas de uma estação.
+É uma classificação binária:
 
-## 2. O que aproveitar e o que falta
+- `0`: sem chuva no período-alvo;
+- `1`: com chuva no período-alvo.
 
-Todos os caminhos deste guia partem da raiz do repositório.
+O modelo também produz uma probabilidade estimada para a classe de chuva. No experimento atual, a decisão é positiva quando essa probabilidade é maior ou igual a 0,5.
 
-| Arquivo ou grupo | Estado e uso nesta entrega |
+As quatro entradas são:
+
+- `temperature_2m`
+- `relative_humidity_2m`
+- `pressure_msl`
+- `cloud_cover`
+
+O alvo é `rain_next_hour`, definido na tabela preparada a partir da chuva registrada no timestamp exato T+1h, com valor positivo quando `rain > 0 mm`.
+
+**Importante:** essa definição depende da hipótese de que a variável `rain` representa a precipitação acumulada na hora anterior ao timestamp. Essa hipótese ainda precisa ser confirmada com evidências da exportação original.
+
+O experimento é retrospectivo: utiliza dados históricos disponíveis atualmente. Isso não demonstra que as mesmas informações estavam publicadas ou recebidas quando a previsão teria sido emitida. A documentação da fonte declara dados meteorológicos históricos de modelos/reanálises da Open-Meteo, e não medições diretas de uma estação física.
+
+O objetivo desta etapa é produzir uma referência simples, um Random Forest, métricas reproduzíveis e modelos que possam ser carregados novamente. Não inclui otimização extensa de parâmetros nem implementação operacional do produto.
+
+## 2. Arquivos, dados e estado do projeto
+
+Todos os caminhos relativos deste guia partem da raiz do repositório.
+
+| Arquivo ou grupo | Estado e finalidade |
 |---|---|
-| [config.py](../config.py) | Reutilizar `WEATHER_FEATURES`, `WEATHER_TIMEZONE` e `settings()['training']`. Centraliza caminhos e nomes das entradas. |
-| [scripts/prepare_weather.py](../scripts/prepare_weather.py) | Já implementado. `prepare_table` prepara em memória; `run` lê/grava arquivos. Reutilizar, sem recriar o alvo no treino. |
-| [tests/test_prepare_weather.py](../tests/test_prepare_weather.py) | Oito testes de preparação: alvo exato, lacunas, valores inválidos, fuso, duplicatas e proteção da fonte. Preservar. |
-| [requirements.txt](../requirements.txt) | Contém NumPy, pandas e Matplotlib. Precisa incorporar a dependência de treinamento com versão validada. |
-| [.env.example](../.env.example) | Modelo de configuração. Corrigir o `.env` local, não colocar caminhos pessoais no código. |
-| `data/processed/weather_training.csv` e arquivos acompanhantes | Já existem nesta máquina, ignorados pelo Git. A tabela não acompanha o clone. |
-| `src/data/audit.py`, `eda.py`, `eda_figures.py`, `eda_report.py` | Investigação e relatórios já realizados. Não são etapas obrigatórias a repetir para treinar; alguns fluxos também dependem de imagens. |
-| `src/data/horizon_feasibility.py`, `provenance_inventory.py` | Investigação de horizontes e origem. Consultar conclusões, sem executá-los como preparação obrigatória. |
-| `src/features/goes.py`, `pilot.py`, `scripts/make_sample.py`, `check_dataset.py` | Relacionados às imagens, fora deste fluxo. Não executar nem exigir seus dados. |
-| `scripts/train.py` | **A implementar:** leitura da tabela, verificações, divisão, treino, avaliação e salvamento. |
-| `tests/test_train.py` | **A implementar:** testes pequenos das fronteiras, seleção das entradas e recarga do modelo. |
-| `docs/integration/` | Contratos propostos da aplicação. A integração acontece depois; não há servidor necessário ao treinamento. |
+| `config.py` | Implementado. Define `WEATHER_FEATURES`, `WEATHER_TIMEZONE` e caminhos por `settings()`. |
+| `scripts/prepare_weather.py` | Implementado. Prepara a tabela, gera metadados e protege arquivos de destino existentes. |
+| `scripts/check_dataset.py` | Implementado. Verifica a configuração e os dados previstos pelo fluxo de conferência. |
+| `scripts/train.py` | Implementado. Treina os modelos e registra os resultados da execução. |
+| `scripts/evaluate_test.py` | Implementado. Avalia o conjunto de teste reservado e protege contra uma segunda avaliação registrada. |
+| `tests/` | Implementado. Inclui testes de preparação, treinamento, auditoria, onboarding e outras verificações do projeto. |
+| `requirements.txt` | Contém as dependências utilizadas pelo experimento, com versões fixadas. |
+| `.env.example` | Modelo de configuração de caminhos. |
+| `data/processed/weather_training.csv` | Tabela preparada, local e ignorada pelo Git. |
+| `data/processed/weather_training.json` | Metadados da preparação, incluindo informações de proveniência e hipótese temporal. |
+| `data/experiments/weather_20261027T173216Z/` | Artefatos de treinamento, validação e teste. |
+| `docs/integration/` | Contratos propostos para a aplicação; não representam uma API já implementada. |
+| `src/data/` e relatórios de EDA/auditoria | Materiais anteriores de investigação. Não precisam ser executados novamente para reproduzir as métricas já registradas. |
+| `src/features/goes.py`, `pilot.py` e ferramentas de amostras GOES | Fora do fluxo atual de treinamento tabular. |
 
-Não fazer uma refatoração ampla. Um script com funções curtas e comentários explicando o motivo das regras é suficiente. A configuração atual menciona caminhos de imagens, mas a preparação meteorológica não os abre; manter `DATASET_MODE=sample` válido não exige arquivo de amostra.
+Não é necessário refatorar a estrutura do projeto nem adicionar infraestrutura de acompanhamento de experimentos. A preparação meteorológica existente deve ser reutilizada, sem recriar o alvo no treinamento.
 
-### Resultado já documentado e conferido anteriormente
+### 2.1. Dados conferidos
 
-- Original: 59.160 linhas, de 01/01/2020 00h a 30/09/2026 23h.
-- Derivado: **59.159 linhas, sete colunas**, com T até 30/09/2026 22h.
-- Alvos: 49.039 zeros e 10.120 positivos (aproximadamente 17,11%).
-- Sem ausências, horários duplicados ou lacunas internas na tabela conferida.
-- Única exclusão: T = 30/09/2026 23h, sem registro em T+1h para definir a resposta.
-- Última execução registrada: **38 testes passaram**, incluindo os oito da preparação. Não é resultado de modelo.
+- CSV original: **59.160 linhas**, abrangendo de 01/01/2020 00h a 30/09/2026 23h.
+- Tabela preparada: **59.159 linhas e sete colunas**, com T até 30/09/2026 22h.
+- Alvos negativos: **49.039**.
+- Alvos positivos: **10.120**, aproximadamente 17,11%.
+- Ausência de valores faltantes, timestamps duplicados e lacunas internas na tabela preparada conferida.
+- Uma linha excluída por não haver registro em T+1h para definir seu alvo: T = 30/09/2026 23h.
 
-O resumo local `weather_training.json` registra `split_created=false`. A auditoria e EDA antigas podem dizer que ainda não havia alvo: são retratos anteriores à preparação de 22/10, não uma instrução para recomeçar.
+A tabela contém, nesta ordem:
 
-## 3. Pendências indispensáveis e seus limites
+`time`, `temperature_2m`, `relative_humidity_2m`, `pressure_msl`, `cloud_cover`, `target_time`, `rain_next_hour`.
 
-### 3.1. Significado dos horários e da chuva
+O hash SHA-256 do CSV original é:
 
-O original contém horários sem offset. O código associa **America/Sao_Paulo** conforme o README e exporta timestamps com offset. Neste período, 14h local corresponde a 17h UTC. Associar um fuso a um horário local e converter um horário já em UTC são operações diferentes.
+`4e83a5248ee7008b0ea4dffb4bba28a80023b1892c4d38ff54cba41b6ee01f4c`
 
-O alvo atual é `rain(T+1h) > 0 mm`, sob a **hipótese de que rain(u) representa (u−1h,u]**. Assim, rain às 15h representa chuva entre 14h e 15h. O código encontra T+1h pelo timestamp exato, não pela posição da próxima linha.
+O hash SHA-256 da tabela preparada é:
 
-A associação matemática foi conferida. Porém, o relatório de proveniência não encontrou a requisição original, resposta bruta ou código de exportação capazes de confirmar a janela e eventuais deslocamentos. O README informa mm no intervalo, sem fechar as bordas temporais. `rain` e `precipitation` são iguais neste arquivo, mas isso não prova equivalência conceitual nem a janela.
+`a3ea57e03c9b66e575cecbcc47a673a9af69c7c6aeeb5d6f07a18b0e69b609d3`
 
-**Como resolver:** solicitar ao produtor esses materiais; acompanhar uma virada de dia e uma sequência seco–chuva–seco da resposta original até o CSV. Verificar fuso, unidades, deslocamentos e se o mesmo processo cobriu todo o período. Uma consulta nova não comprova a exportação antiga.
+Esses hashes identificam as versões utilizadas. Se os arquivos recebidos tiverem hashes diferentes, não se deve presumir que sejam equivalentes sem verificar as diferenças.
 
-**Dependência:** para afirmar alvo definitivo, precisamos dessa confirmação. Para o MVP experimental, a equipe pode registrar a hipótese e aceitar explicitamente a limitação. Se surgirem evidências contrárias, revisar os alvos antes de interpretar os resultados.
+## 3. Limitações científicas ainda pendentes
 
-### 3.2. Disponibilidade em T
+### 3.1. Semântica temporal da chuva
 
-Timestamp da variável é sua referência temporal, não prova de publicação ou recebimento. Mesmo as quatro medidas em T podem vir de análises produzidas depois. Não há logs históricos suficientes no material consultado para demonstrar disponibilidade operacional.
+O arquivo original contém timestamps sem offset. A preparação associa o fuso `America/Sao_Paulo` e grava timestamps com offset. Durante o período considerado, 14h em Londrina corresponde a 17h UTC.
 
-**Decisão necessária:** seguir como experimento retrospectivo condicionado às hipóteses, ou exigir comprovação operacional antes do treino. A proposta para esta primeira versão é a primeira opção, registrada no relatório, sem prometer desempenho em tempo real.
+O alvo atual é `rain(T+1h) > 0 mm`, condicionado à hipótese de que `rain(u)` representa o intervalo `(u−1h,u]`. Sob essa hipótese, o valor às 15h representa a chuva acumulada entre 14h e 15h.
 
-Para uma versão operacional posterior, definir fonte e registrar horários de referência, publicação/recebimento e versão das entradas. Acrescentar um atraso arbitrário não comprova que reanálises estavam disponíveis.
+O código realiza a associação pelo timestamp exato T+1h, e não pela posição da próxima linha. Essa associação matemática foi conferida. Entretanto, a requisição original, a resposta bruta ou o código de exportação que confirmaria a semântica da variável não foram recuperados.
 
-### 3.3. Impedimentos práticos
+O fato de `rain` e `precipitation` terem os mesmos valores no arquivo não comprova, por si só, que sejam conceitualmente intercambiáveis ou que tenham a mesma janela temporal.
 
-| Pendência | Etapa afetada | Critério de resolução |
-|---|---|---|
-| Caminho do CSV configurado aponta para arquivo inexistente | Regeneração da tabela | `settings()['csv'].is_file()` retorna `True` para a fonte correta |
-| Datas e regra de fronteira não aprovadas | Divisão e avaliação | Decisões registradas antes de comparar modelos |
-| Dependência e script de treino ausentes | Treinamento | Instalação compatível, script e testes funcionando |
-| Hipótese do alvo e escopo retrospectivo não registrados para o experimento | Interpretação dos resultados | Equipe aceita a limitação ou confirma a origem antes de seguir |
+**Próxima ação:** solicitar ao produtor o material original da consulta ou exportação. Se possível, conferir uma virada de dia e uma sequência seco–chuva–seco desde a resposta original até o CSV. Uma consulta nova não comprova como a exportação antiga foi produzida.
 
-O CSV original foi localizado em Downloads; a tabela preparada existe. Portanto, o caminho incorreto não impede ler a tabela existente, mas deve ser corrigido na passagem do projeto. Novos gráficos, mais entradas, ajuste fino, validação operacional e integração com API podem ficar para depois.
+Até que essa investigação seja concluída, os resultados devem ser apresentados como condicionados à hipótese temporal documentada.
 
-## 4. Decisões a fechar antes do primeiro experimento
+### 3.2. Disponibilidade das entradas em T
 
-Preencher responsável, data e decisão final em um pequeno registro Markdown. A tabela abaixo contém **propostas**, não decisões tomadas por este guia.
+O timestamp de uma observação indica sua referência temporal, não necessariamente quando ela foi publicada ou recebida. Mesmo os valores registrados em T podem ter sido produzidos posteriormente por modelos ou reanálises.
 
-| Decisão | Importância e evidência disponível | Proposta inicial |
-|---|---|---|
-| Escopo temporal | Origem histórica declarada; disponibilidade em T não comprovada | Retrospectivo experimental, com hipótese temporal explícita |
-| Definição de chuva | Código usa `rain > 0`; mínimo positivo documentado é 0,1 mm | Manter qualquer chuva líquida positiva; não trocar coluna ou limiar silenciosamente |
-| Horizonte | Preparação e contrato usam uma hora | Manter T → (T,T+1h], condicionado à semântica da fonte |
-| Entradas | Quatro colunas já preparadas e alinhadas ao contrato da API | Manter exatamente `WEATHER_FEATURES`, na mesma ordem |
-| Períodos | Seis anos completos e janeiro–setembro/2026 | Treino 2020–2024; validação 2025; teste janeiro–setembro/2026 |
-| Alternativa de calendário | Teste 2026 não cobre outubro–dezembro | Se ciclo completo for prioritário: treino 2020–2023, validação 2024, teste 2025; reservar 2026 para avaliação adicional futura |
-| Fronteiras | Alvo está uma hora após T | Exigir `target_time < início do conjunto seguinte` |
-| Intervalo adicional | Sem janelas móveis; horizonte de uma hora | Sem intervalo extra além da exclusão de fronteira, salvo evidência de latência ou mudança do objetivo |
-| Ausências e inválidos | Preparação rejeita linhas inelegíveis e registra motivos; tabela atual sem ausências | Manter política atual, sem imputação; parar se a tabela recebida divergir e investigar |
-| Modelo e referência | Nenhum modelo implementado | Referência sempre seca e Random Forest pequeno, configuração fixa |
-| Limiar de decisão | Contrato propõe 0,5; não houve validação | Começar com 0,5, distinto do limiar de chuva em mm; eventual ajuste só na validação |
-| Métricas | Cerca de 83% das linhas são secas | Matriz de confusão, precisão, recall, F1 da chuva e acurácia; decidir peso de alarmes falsos versus chuvas perdidas |
-| Reprodutibilidade | Preparação já registra hash e versões | Semente proposta 42; salvar parâmetros, versões, datas e hashes |
+Não foram encontrados registros históricos suficientes para provar que as quatro entradas estavam disponíveis no momento em que a previsão teria sido emitida.
 
-Escolher uma proposta de calendário antes de treinar. Não testar alternativas e selecionar a que produz o melhor resultado de teste. Não equalizar artificialmente as classes da validação ou do teste.
+O experimento atual é, portanto, retrospectivo. Uma futura versão operacional precisará definir a fonte de dados e registrar os horários de referência, publicação e recebimento, além da versão das entradas.
 
-## 5. Ambiente e arquivos necessários
+Não se deve acrescentar um atraso arbitrário e tratá-lo como prova de disponibilidade operacional.
 
-### 5.1. Instalar o ambiente atual
+### 3.3. Integração com a aplicação
 
-No PowerShell, dentro da pasta com `config.py` e `requirements.txt`:
+Não foi encontrada uma implementação de API em `src`, `scripts` ou nos arquivos de entrada usuais do projeto. Os documentos em `docs/integration/` descrevem contratos propostos.
 
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python -m pip check
-```
+A existência dos modelos treinados não significa que exista um endpoint de previsão. A integração, a fonte de dados em tempo real, o banco e a interface continuam fora do escopo desta entrega.
 
-Se o ambiente já existe, apenas ativá-lo. As versões declaradas hoje são NumPy 2.5.4, pandas 3.0.1 e Matplotlib 3.11.2. A instalação limpa dessas versões na máquina do colega ainda precisa ser conferida; a execução anterior usou ambientes locais já disponíveis. Se houver incompatibilidade ou pacote indisponível, registrar o erro e ajustar versões compatíveis em conjunto, sem atualizar tudo silenciosamente.
+## 4. Protocolo experimental executado
 
-### 5.2. Configurar a fonte
+O experimento utilizou a divisão cronológica proposta originalmente:
 
-Copiar `.env.example` para `.env` **somente se `.env` ainda não existir**:
+| Conjunto | Período | Linhas |
+|---|---|---:|
+| Treino | 2020–2024 | 43.847 |
+| Validação | 2025 | 8.759 |
+| Teste | Janeiro–setembro de 2026 | 6.551 |
+| Excluídas nas fronteiras | Transições entre períodos | 2 |
 
-```powershell
-Copy-Item .env.example .env
-```
+As duas linhas excluídas são:
 
-Na máquina atual, editar estas linhas:
+- T = 31/12/2024 23h, cujo alvo está em 01/01/2025 00h;
+- T = 31/12/2025 23h, cujo alvo está em 01/01/2026 00h.
 
-```dotenv
-WEATHER_CSV_PATH=C:/Users/CANAL/Downloads/Backend_UTFPR/dataset_weather.csv
-WEATHER_TRAINING_PATH=data/processed/weather_training.csv
-```
+A regra aplicada exige que o `target_time` do conjunto anterior seja estritamente anterior ao início do conjunto seguinte. Assim, o alvo de uma linha não atravessa a fronteira temporal.
 
-No computador do colega, usar a localização real da cópia recebida. Caminhos relativos partem da raiz do projeto; variáveis do processo prevalecem sobre `.env`. O clone não contém CSVs: compartilhar o CSV original e, se útil, os derivados por armazenamento da equipe. Não copiar dados para pastas de código.
+Os horários foram mantidos para divisão e auditoria, mas não fazem parte das quatro entradas do modelo.
 
-Conferência existente, executada nesta inspeção:
+### 4.1. Modelos e parâmetros
+
+Foram treinadas duas referências:
+
+1. **Baseline sempre seco:** prevê a classe `0` para todas as observações.
+2. **Random Forest:** configuração fixa, sem busca extensa de parâmetros.
+
+Parâmetros registrados do Random Forest:
+
+- `n_estimators=100`
+- `max_depth=8`
+- `min_samples_leaf=10`
+- `random_state=42`
+- `n_jobs=1`
+- `class_weight=None`
+
+O limiar de decisão foi 0,5. Esse limiar de probabilidade não deve ser confundido com a definição do alvo observado, que utiliza `rain > 0 mm`.
+
+O ajuste dos modelos utiliza somente o conjunto de treino. A validação serve para comparação; o teste é reservado para avaliação final.
+
+### 4.2. Ambiente
+
+Versões registradas no manifesto do experimento:
+
+- Python 3.13.3
+- NumPy 2.5.4
+- pandas 3.0.1
+- scikit-learn 1.9.1
+- joblib 1.6.0
+
+O arquivo `requirements.txt` contém as dependências fixadas. A instalação foi verificada em um ambiente virtual limpo criado com Python 3.13.3, e `python -m pip check` terminou sem conflitos.
+
+Os 42 testes automatizados passaram nesse ambiente.
+
+## 5. Resultados
+
+As métricas foram calculadas separadamente na validação e no teste. Precisão, recall e F1 referem-se à classe positiva, isto é, à ocorrência de chuva.
+
+### 5.1. Validação — 2025
+
+| Métrica | Baseline sempre seco | Random Forest |
+|---|---:|---:|
+| Acurácia | 84,67% | 85,42% |
+| Precisão da chuva | 0% | 53,53% |
+| Recall da chuva | 0% | 37,23% |
+| F1 da chuva | 0% | 43,92% |
+| Chuvas observadas | 1.343 | 1.343 |
+| Previsões positivas | 0 | 934 |
+
+O Random Forest melhorou a acurácia e identificou parte das ocorrências de chuva. Ainda assim, deixou de detectar a maior parte dos casos positivos.
+
+### 5.2. Teste — janeiro a setembro de 2026
+
+| Métrica | Baseline sempre seco | Random Forest |
+|---|---:|---:|
+| Acurácia | 79,01% | 81,18% |
+| Precisão da chuva | 0% | 59,15% |
+| Recall da chuva | 0% | 33,38% |
+| F1 da chuva | 0% | 42,68% |
+| Chuvas observadas | 1.375 | 1.375 |
+| Previsões positivas | 0 | 776 |
+
+Matriz de confusão do Random Forest no teste, com linhas representando a classe real `[0, 1]` e colunas representando a classe prevista `[0, 1]`:
+
+| | Prevê sem chuva | Prevê chuva |
+|---|---:|---:|
+| Sem chuva real | 4.859 | 317 |
+| Chuva real | 916 | 459 |
+
+Portanto, o modelo identificou 459 ocorrências positivas, deixou passar 916 e gerou 317 alarmes falsos.
+
+O baseline sempre seco tem acurácia relativamente alta porque a maioria das observações é negativa. Entretanto, seu recall de chuva é zero, o que o torna inadequado se o objetivo for detectar ocorrências de chuva.
+
+**Interpretação:** o fluxo técnico foi concluído e o Random Forest superou o baseline nas métricas principais apresentadas. O recall de 33,38% no teste mostra, porém, que o modelo deixou passar aproximadamente dois terços das ocorrências positivas. Não há uma meta mínima de desempenho aprovada, portanto não é possível declarar que o modelo esteja pronto para uso.
+
+O teste cobre somente janeiro a setembro de 2026. Não representa o ano completo e não deve ser descrito como tal.
+
+### 5.3. Integridade dos resultados
+
+Os seguintes pontos foram verificados:
+
+- Os arquivos de métricas e previsões de validação e teste existem.
+- A validação contém 8.759 previsões e o teste contém 6.551.
+- As colunas de previsão verificadas não apresentam valores ausentes.
+- As divisões e contagens correspondem ao resumo registrado.
+- O hash da tabela preparada corresponde ao hash registrado no manifesto.
+- Os modelos salvos foram carregados novamente em um ambiente limpo e produziram previsões válidas em amostras de verificação.
+- O manifesto registra `test_evaluated: true`.
+
+A recarga e a verificação em amostras demonstram que os artefatos podem ser utilizados no ambiente testado. Não equivalem a uma garantia de previsões idênticas em todos os ambientes ou versões de bibliotecas.
+
+**Não executar novamente o treinamento nem a avaliação do teste apenas para reproduzir os números deste guia.** Se alterações futuras forem selecionadas com base nos resultados desse teste, será necessária uma avaliação independente para confirmar as mudanças.
+
+## 6. Caminhos e reprodução em outra máquina
+
+O `config.py` define a raiz do projeto com base na localização do próprio arquivo. Os caminhos relativos são resolvidos a partir dessa raiz; variáveis de ambiente podem substituir os valores padrão.
+
+Os caminhos relevantes são:
+
+- `WEATHER_CSV_PATH`: CSV original, padrão `data/raw/dataset_weather.csv`.
+- `WEATHER_TRAINING_PATH`: tabela preparada, padrão `data/processed/weather_training.csv`.
+
+Na máquina em que o experimento foi executado, o CSV original estava em Downloads, enquanto a tabela preparada estava em `data/processed/`. Por isso, não se deve presumir que o caminho padrão do CSV original funcione em outra máquina.
+
+O repositório não inclui automaticamente todos os arquivos de dados e artefatos experimentais. Para uma entrega reproduzível, compartilhar por canal apropriado:
+
+- CSV original e documentação da fonte;
+- tabela preparada e seu JSON de metadados, se a equipe optar por reutilizá-los;
+- relatórios necessários para compreender as hipóteses;
+- hashes e identificação do experimento;
+- versão do código utilizada.
+
+Não colocar caminhos pessoais no código e não incluir credenciais no `.env`.
+
+Para conferir os caminhos configurados, sem treinar nem avaliar modelos:
 
 ```powershell
 python -B -c "from config import settings; c=settings(); print('CSV:', c['csv'], c['csv'].is_file()); print('Tabela:', c['training'], c['training'].is_file())"
 ```
 
-Nesta máquina, antes de corrigir a configuração, o primeiro resultado foi `False` e o segundo `True`. O original em Downloads existe. Para quem vai preparar do zero, o primeiro deve ser `True`; o segundo só será `True` após gerar a tabela.
+Para preparar a tabela do zero, primeiro confirmar que a fonte existe no caminho configurado. A preparação deve gerar uma nova tabela sem sobrescrever arquivos existentes. Se for necessário produzir uma nova versão, utilizar um destino diferente e atualizar `WEATHER_TRAINING_PATH` de forma correspondente.
 
-### 5.3. Conferir o código existente
+A instalação e a execução dos testes podem ser conferidas em um ambiente virtual:
 
 ```powershell
-python -B scripts/prepare_weather.py --help
+py -3.13 -m venv .venv-validacao
+.\.venv-validacao\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m pip check
 python -B -m unittest discover -s tests -v
 ```
 
-O `--help` foi verificado nesta inspeção e aceita `--csv`, `--output` e `--plot`. A suíte teve 38 testes aprovados na última execução, em 25/10; não foi executada novamente para escrever este guia. Os testes usam exemplos sintéticos e não exigem acervo real de imagens.
+Esses comandos são para verificar o ambiente e os testes. Não executam o treinamento nem a avaliação final.
 
-### 5.4. Adicionar o necessário para treinar — tarefa futura
+## 7. Artefatos do experimento
 
-Se a proposta Random Forest for aceita, adicionar **scikit-learn** ao ambiente e fixar em `requirements.txt` a versão validada. Instalação inicial a ser executada pelo implementador, não realizada nesta tarefa:
+Os arquivos da execução estão em:
 
-```powershell
-python -m pip install scikit-learn
-python -m pip check
-python -c "import sklearn; print(sklearn.__version__)"
-```
+`data/experiments/weather_20261027T173216Z/`
 
-Esse comando não fixa uma versão: depois de verificar compatibilidade e testes, registrar a versão exata no arquivo de dependências para os demais repetirem o ambiente. Se usar `joblib` diretamente para salvar o modelo, declarar também sua versão como dependência direta. Não instalar servidor web, bibliotecas de imagens ou ferramentas de acompanhamento de experimentos para este treino.
-
-## 6. Roteiro de implementação, em ordem
-
-### 6.1. Conferir a entrada e a tabela existente
-
-**Arquivos:** `config.py`, CSV original, tabela derivada e seu JSON. **Entrada:** arquivos recebidos e decisões registradas. **Saída:** resumo da conferência e hashes, sem editar a fonte.
-
-Conferir nomes/tipos de colunas, datas mínima/máxima, ordem crescente, duplicatas de T, horas ausentes, ausências/não finitos e domínio das medidas. Repetições de valores em horários diferentes não são automaticamente duplicatas erradas.
-
-A tabela esperada contém, nesta ordem: `time`, `temperature_2m`, `relative_humidity_2m`, `pressure_msl`, `cloud_cover`, `target_time`, `rain_next_hour`. Validar alvo somente 0/1 e diferença de uma hora em todas as linhas. Os timestamps do derivado já têm offset: lê-los como instantes e converter para São Paulo, sem localizar novamente como se fossem horários ingênuos.
-
-**Verificação:** conferir a versão recebida contra o JSON e os números da seção 2. Divergências não devem ser escondidas removendo registros até as contagens coincidirem.
-
-### 6.2. Reutilizar a criação do alvo futuro
-
-**Arquivo existente:** `scripts/prepare_weather.py`. **Entrada:** CSV original. **Saída:** tabela experimental, JSON, CSV de exclusões, prévia e gráfico opcional.
-
-Somente se ainda não houver tabela ou se houver mudança aprovada no protocolo:
-
-```powershell
-python -B scripts/prepare_weather.py --plot
-```
-
-Para nova versão, sem sobrescrever:
-
-```powershell
-python -B scripts/prepare_weather.py --output data/processed/weather_training_v2.csv --plot
-```
-
-Ao usar outro nome, atualizar `WEATHER_TRAINING_PATH` para que o futuro treino não leia a versão antiga. A saída deve ficar dentro de `data/processed/`. O script não sobrescreve arquivos existentes.
-
-O código já faz a junção por T+1h exato e rejeita futuro ausente, chuva futura negativa/não finita e entradas inválidas. Não preencher um alvo ausente com zero. Não aplicar um segundo deslocamento ao alvo no treino.
-
-**Verificação:** comparar respostas ao original por timestamp e inspecionar uma virada de dia. Exemplo real já conferido: T = 01/01/2020 14h tem entradas 33,3 °C, 42%, 1005,3 hPa, 93%; a chuva às 15h gera alvo 1. Isso confirma alinhamento no arquivo, não a hipótese sobre a origem.
-
-### 6.3. Preparar X e y
-
-**Arquivo a criar:** `scripts/train.py`. **Entrada:** tabela conferida. **Saída:** entradas X, alvo y e horários mantidos separadamente para divisão/auditoria.
-
-- X: somente a lista explícita `WEATHER_FEATURES`, preservando sua ordem.
-- y: `rain_next_hour`.
-- Horários: `time` e `target_time`, usados para selecionar conjuntos, não como entradas deste MVP.
-
-Não usar “todas as colunas exceto o alvo”. Não normalizar ou imputar por hábito: a tabela atual não precisa de preenchimento, e a proposta de árvores não exige padronização de escala para este fluxo básico. Se a tabela tiver ausências inesperadas, interromper e revisar a preparação.
-
-### 6.4. Dividir cronologicamente
-
-**Arquivo a criar:** função simples dentro de `scripts/train.py`, coberta por `tests/test_train.py`. **Entrada:** datas aprovadas e tabela com horários. **Saída:** seleções separadas em memória e manifesto com contagens/exclusões; não é obrigatório gravar três cópias de CSV.
-
-Para a proposta principal, B1 = `2025-01-01T00:00:00-03:00` e B2 = `2026-01-01T00:00:00-03:00`:
-
-- Treino: T desde 01/01/2020, `time < B1` e `target_time < B1`.
-- Validação: `time >= B1`, `time < B2` e `target_time < B2`.
-- Teste: `time >= B2`, até o fim elegível da tabela, com alvo até 30/09/2026 23h.
-
-Não usar divisão aleatória ou embaralhamento global. A regra estrita retira do conjunto anterior inclusive o alvo que termina exatamente na fronteira. Por exemplo, T = 31/12/2024 23h consulta 01/01/2025 00h e deve ficar fora do treino. Fazer o mesmo em 31/12/2025 23h, preservando os registros na tabela original e anotando o motivo de não selecioná-los.
-
-**Contagens esperadas somente se essas datas e regras forem aprovadas e a tabela permanecer igual:** 43.847 treino, 8.759 validação, 6.551 teste e duas linhas excluídas nas fronteiras. São deduções das contagens existentes, não resultado de uma divisão executada.
-
-**Verificação:** conjuntos não vazios, horários sem interseção, máximo `target_time` anterior menor que início seguinte, soma de selecionados e excluídos igual ao total. Contar classes em cada período; métricas dependentes de duas classes precisam sinalizar quando uma estiver ausente.
-
-Um intervalo extra de dias não é requisito estrutural para as quatro entradas instantâneas e horizonte de uma hora. Reavaliar se houver latência comprovada, janelas móveis ou necessidade de separar eventos de chuva completos. Horas próximas continuam correlacionadas; não prometer independência total.
-
-### 6.5. Treinar referência e modelo
-
-**Arquivo a criar:** `scripts/train.py`. **Entrada:** apenas X/y de treino para o ajuste. **Saída:** referência e modelo ajustados, parâmetros e previsão na validação.
-
-Implementar funções pequenas para carregar/verificar, separar, treinar, avaliar e salvar. Não criar hierarquias de classes ou um sistema de plugins. Reutilizar as constantes existentes em vez de repetir nomes de colunas.
-
-Proposta de primeiro experimento, sujeita a aprovação:
-
-- **Baseline (referência):** sempre prever classe 0, por exemplo `DummyClassifier(strategy='constant', constant=0)`. Mostra o que acontece ao nunca avisar chuva. [Documentação oficial](https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html).
-- **Modelo:** `RandomForestClassifier` com `n_estimators=100`, `max_depth=8`, `min_samples_leaf=10`, `random_state=42`, `n_jobs=1`, `class_weight=None`. É uma combinação de árvores com tamanho limitado; proposta inicial simples, não parâmetros otimizados. Registrar todos os parâmetros efetivos. [Documentação oficial](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html).
-
-Sem busca em grade, reamostragem ou balanceamento automático inicialmente. Usar probabilidade da classe **1**, identificando a coluna por `classes_`, e não supondo sua posição sem conferir. Proposta inicial: chuva prevista quando probabilidade ≥ 0,5. Isso é diferente de definir chuva observada como quantidade > 0 mm.
-
-### 6.6. Avaliar primeiro na validação
-
-**Entrada:** previsões da referência e do modelo, comparadas aos mesmos alvos de validação. **Saída:** métricas identificadas como validação, matriz de confusão e breve interpretação.
-
-| Medida | Pergunta que responde |
+| Arquivo | Finalidade |
 |---|---|
-| Matriz de confusão, rótulos `[0, 1]` | Quantas horas secas/chuvas acertamos, quantos alarmes falsos e quantas chuvas perdemos? |
-| Precisão da chuva | Dos avisos de chuva, quantos estavam certos? |
-| Recall (sensibilidade) da chuva | Das horas com chuva, quantas detectamos? |
-| F1 da chuva | Como resumir o equilíbrio entre precisão e recall? |
-| Acurácia | Que fração de todas as horas acertamos? |
-| Contagem e proporção de positivos | Em que distribuição essas métricas foram obtidas? |
+| `baseline.joblib` | Modelo de referência sempre seco |
+| `random_forest.joblib` | Random Forest treinado |
+| `manifest.json` | Configuração, versões, hashes e estado da avaliação |
+| `metrics_validation.json` | Métricas da validação |
+| `predictions_validation.csv` | Previsões da validação para auditoria |
+| `split_summary.json` | Contagens e períodos dos conjuntos |
+| `metrics_test.json` | Métricas finais do teste |
+| `predictions_test.csv` | Previsões do teste para auditoria |
 
-A referência sempre seca pode parecer boa em acurácia: no conjunto total, aproximadamente 82,89% das linhas são secas. Isso é contexto descritivo, não métrica de teste já obtida. Se houver chuva no período, essa referência terá recall de chuva zero. Se não houver nenhum aviso positivo, precisão tem denominador zero: registrar a convenção adotada, por exemplo zero com aviso, em vez de esconder a situação. Se não houver chuva observada, marcar recall/F1 como não informativos para a tarefa nesse recorte.
+Esses arquivos não devem ser tratados como dados públicos ou incluídos no Git à força. Para carregar modelos serializados, utilizar somente artefatos confiáveis e um ambiente compatível.
 
-Escolher alterações de parâmetros ou limiar **somente na validação**, mantendo poucas tentativas registradas. Antes de escolher por F1 ou priorizar recall, combinar o custo de alarmes falsos e chuvas perdidas. Não há meta mínima de desempenho aprovada.
+A preparação da tabela também mantém `weather_training.json`, que documenta informações como hash, versões e hipótese temporal.
 
-### 6.7. Congelar escolhas e avaliar no teste
+## 8. Cuidados contra vazamento temporal
 
-**Entrada:** mesmo modelo salvo, escolhas fechadas e teste reservado. **Saída:** avaliação final claramente separada da validação.
+1. **O alvo futuro não entra em X.** `rain_next_hour` e `target_time` não são entradas do modelo.
+2. **As entradas permanecem limitadas às quatro colunas definidas.** Não incluir variáveis adicionais sem revisar o protocolo.
+3. **A divisão respeita o alvo.** Não basta separar somente pela data de T; o alvo precisa terminar antes da fronteira do conjunto seguinte.
+4. **Não utilizar dados posteriores para preencher ausências.** A interpolação que utiliza observações futuras pode introduzir informação indisponível em T.
+5. **Transformações futuras devem ser ajustadas somente no treino.** Caso sejam introduzidas imputação, seleção de variáveis ou escala, devem ser ajustadas no conjunto de treino e aplicadas sem reaprendizado à validação e ao teste.
+6. **A disponibilidade operacional continua sendo uma limitação.** Um timestamp anterior a T não comprova que o dado estava publicado ou recebido até o instante da previsão.
+7. **A EDA anterior examinou os dados históricos.** Portanto, o teste não deve ser descrito como totalmente desconhecido para todas as pessoas envolvidas. A reserva significa que ele não deve orientar novas escolhas de modelo a partir de agora.
 
-Para simplificar o primeiro ciclo, manter o modelo ajustado apenas no treino; não adicionar um reajuste em treino+validação nesta entrega. Congelar entradas, parâmetros, limiar e regras antes de calcular métricas finais. Se o resultado for baixo, relatá-lo; não alterar datas ou parâmetros para melhorar aquele teste.
+## 9. Checklist de passagem de responsabilidade
 
-A EDA já examinou descritivamente todos os anos. Não afirmar que o teste nunca foi visto. A reserva significa não usá-lo para seleção baseada em desempenho a partir de agora. Se ele orientar mudanças posteriores, será necessária outra avaliação independente para confirmar essas mudanças.
+### Entrega do projeto
 
-## 7. Regras para não usar informações do futuro
+- [ ] Compartilhar o repositório, este guia e os relatórios citados.
+- [ ] Entregar o CSV original e a documentação da fonte por canal separado do Git.
+- [ ] Informar os hashes do CSV original e da tabela preparada.
+- [ ] Compartilhar os artefatos experimentais necessários à análise.
+- [ ] Conferir e corrigir os caminhos na máquina de destino.
+- [x] Registrar os parâmetros, versões, métricas e estado da avaliação final.
+- [x] Registrar a limitação de cobertura do teste e as hipóteses temporais.
 
-1. **Alvo futuro é resposta, não entrada.** `rain(T+1h)` pode definir y, mas nunca X da previsão em T. Também não usar médias que incluam essa hora, `rain_next_hour` ou `target_time` como entrada.
-2. **Chuva passada não é proibida por definição.** `rain(T)` ou valores anteriores poderiam ser entradas se sua janela terminasse até T e estivessem disponíveis até a emissão. Isso precisa ser verificado. A primeira versão mantém as quatro entradas e não inclui chuva passada; adicioná-la exigiria nova tabela e contrato de entrada, não uma alteração silenciosa.
-3. **Timestamp ≤ T não basta.** A disponibilidade real também depende de publicação/recebimento e versão. No estudo retrospectivo, isso permanece limitação explícita.
-4. **Não usar código meteorológico como atalho para a resposta.** Ele não está no conjunto de entradas aprovado para preparação. Qualquer ampliação exige justificativa e revisão temporal.
-5. **Aprender transformações só no treino.** Se futuramente houver imputação, escala ou seleção de variáveis, ajustar no treino e aplicar sem reaprender à validação/teste. Uma `Pipeline` pode ajudar, caso essas operações sejam necessárias; não precisamos adicioná-las agora. [Orientação oficial sobre vazamento](https://scikit-learn.org/stable/common_pitfalls.html).
-6. **Não preencher com dados posteriores.** Interpolação usando os dois lados ou preenchimento a partir da próxima observação pode trazer futuro para T. Ausência do alvo não é ausência de chuva.
-7. **Respeitar as fronteiras pelo alvo**, não somente pela data das entradas. Testes automatizados devem proteger essa regra.
+### Decisões e investigação ainda pendentes
 
-## 8. Verificação rápida antes do treino completo
+- [ ] Confirmar com o produtor a janela temporal exata da variável `rain` no CSV original.
+- [ ] Confirmar ou aceitar formalmente a hipótese temporal utilizada para o experimento.
+- [ ] Definir uma fonte operacional e comprovar a disponibilidade das quatro entradas no momento da previsão.
+- [ ] Definir os custos relativos de alarmes falsos e chuvas perdidas antes de ajustar o limiar.
+- [ ] Definir critérios mínimos de desempenho antes de qualquer nova comparação de modelos.
 
-**Esta etapa depende da implementação futura; não existe opção `--smoke` atualmente.**
+### Execução técnica
 
-Primeiro, criar testes sintéticos que confirmem: ordenação e fuso; nenhuma entrada futura; junção exata preservada; exclusão da hora anterior à fronteira; conjuntos disjuntos; rejeição de esquema inválido. Preservar os testes existentes.
+- [x] Preparar e conferir a tabela meteorológica.
+- [x] Implementar o treinamento e os testes correspondentes.
+- [x] Validar o ambiente e as dependências em ambiente limpo.
+- [x] Conferir as fronteiras e contagens da divisão cronológica.
+- [x] Treinar o baseline e o Random Forest.
+- [x] Registrar os resultados da validação.
+- [x] Congelar a configuração e avaliar o teste uma vez.
+- [x] Salvar e recarregar os modelos.
+- [x] Verificar os artefatos e executar os 42 testes automatizados.
+- [ ] Fazer uma avaliação independente caso alterações futuras sejam selecionadas com base no teste atual.
 
-Depois, fazer uma execução pequena usando somente o período destinado ao treino, com blocos cronológicos internos de desenvolvimento e ambas as classes quando disponíveis. Usar poucas árvores apenas para verificar leitura → ajuste → previsão → gravação → recarga. Não buscar exemplos no teste para completar a amostra. Não interpretar métricas desse ensaio como resultado científico; marcar a execução como técnica.
+### Integração e uso operacional
 
-Verificar: nenhuma exceção, quatro entradas na ordem correta, uma previsão por linha, probabilidades finitas entre 0 e 1 e resultados reproduzidos após recarregar o modelo no mesmo ambiente. Em seguida executar a configuração completa aprovada, avaliando primeiro a validação.
+- [ ] Definir a origem e o procedimento de obtenção das entradas para previsões operacionais.
+- [ ] Implementar a API, caso seja aprovada como próxima etapa.
+- [ ] Implementar persistência e interface, caso sejam necessárias ao MVP.
+- [ ] Definir monitoramento e critérios de reavaliação antes de uso real.
 
-**Comando futuro, somente depois de criar e documentar o arquivo:**
+Esses itens de integração não impedem reconhecer a conclusão do experimento retrospectivo. Eles delimitam o trabalho necessário para transformar o experimento em um serviço operacional.
 
-```powershell
-python -B scripts/train.py
-```
-
-Hoje esse comando falha porque o arquivo não existe. O implementador deve definir e documentar como fornecer datas, destino e seleção de avaliação final; não há opções de linha de comando prontas neste guia. A execução padrão proposta não deve consumir o teste automaticamente. Preferir uma ação explícita para a avaliação final.
-
-## 9. Salvar o necessário para repetir o experimento
-
-Sugestão de saída futura: `data/experiments/<identificador-da-execucao>/`, com diretório novo por execução. Esses artefatos ficam fora do Git pela política atual.
-
-| Artefato proposto | Conteúdo mínimo |
-|---|---|
-| `config.json` | Hipótese temporal, alvo, horizonte, fuso, entradas ordenadas/unidades, datas e regra de fronteira, limiar, semente e parâmetros completos |
-| `manifest.json` | Hashes do original/derivado, caminho de entrada, versão do código/commit e alterações locais, versões Python/pacotes, horário da execução |
-| `split_summary.json` | Limites efetivos de T e alvo, linhas/classes por conjunto e exclusões por motivo |
-| `metrics_validation.json` | Referência e modelo, matriz de confusão rotulada e convenção para métricas indefinidas |
-| `metrics_test.json` | Somente após avaliação final explícita; indicar quais escolhas já estavam congeladas |
-| `model.joblib` | Modelo e, se existirem, transformações ajustadas, junto do esquema e limiar necessários à previsão |
-| `predictions_validation.csv` | T, alvo verdadeiro, probabilidade e decisão para auditoria; arquivo do teste somente na avaliação final |
-
-Esses arquivos ainda não são produzidos por nenhum script de treino. Não copiar o dataset inteiro em cada execução: hashes e horários selecionados permitem rastrear a fonte. Recarregar apenas modelos gerados pela equipe e confiáveis. A repetição deve usar as mesmas versões, não apenas a mesma semente.
-
-Hashes registrados na revisão da tabela, para identificar a versão esperada:
-
-- CSV original: `4e83a5248ee7008b0ea4dffb4bba28a80023b1892c4d38ff54cba41b6ee01f4c`.
-- Tabela preparada: `a3ea57e03c9b66e575cecbcc47a673a9af69c7c6aeeb5d6f07a18b0e69b609d3`.
-
-O script de preparação já registra hash do original, versões e hipótese em `weather_training.json`; o treinamento deve acrescentar a identificação do derivado, configuração e resultados. Salvar um resumo humano em `reports/project/` para versionar. CSV, JSON, modelo e ambiente permanecem locais; não usar `git add -f` para incluí-los.
-
-## 10. Checklist de passagem de responsabilidade
-
-### O que quem entrega o projeto deve preparar
-
-- [ ] Dar acesso ao repositório e compartilhar este guia e os relatórios citados.
-- [ ] Entregar o CSV original e seu README por canal separado do Git; opcionalmente entregar tabela, JSON e exclusões já gerados.
-- [ ] Informar os hashes/versões e ajudar a corrigir o caminho no `.env` do colega.
-- [ ] Explicar que não há treino, divisão ou API implementados e que as métricas ainda não existem.
-- [ ] Encaminhar ao produtor as dúvidas de origem, ou indicar quem dará continuidade à investigação.
-
-### O deve ser decidido com a equipe
-
-- [ ] Aceitar explicitamente o escopo retrospectivo e a hipótese temporal, ou obter evidência da origem antes de seguir.
-- [ ] Confirmar alvo, horizonte, quatro entradas e política de ausência.
-- [ ] Escolher datas e regra de fronteira; registrar cobertura parcial de 2026, se usada.
-- [ ] Confirmar referência, modelo inicial, limiar e métricas para comparar na validação.
-
-### O deve ser implementado e executado
-
-- [ ] Validar ambiente/dependências e caminhos sem exigir imagens.
-- [ ] Reutilizar a tabela ou gerar nova versão quando necessário, sem sobrescrever fonte.
-- [ ] Implementar `scripts/train.py` e testes pequenos, preservando a preparação existente.
-- [ ] Conferir fronteiras e contagens; executar o ensaio técnico sem abrir o teste final.
-- [ ] Treinar referência e modelo, avaliar validação e registrar cada escolha.
-- [ ] Congelar a configuração; avaliar o teste uma vez para encerrar o ciclo.
-- [ ] Salvar artefatos, recarregar o modelo e verificar que as previsões se reproduzem.
-
-### Como reconhecer que o primeiro treino funcionou
-
-O fluxo técnico funcionou quando lê a versão correta dos dados, separa períodos sem sobreposição indevida de alvos, ajusta somente no treino, produz probabilidades/decisões válidas e salva um modelo recarregável com resultados rastreáveis. **Desempenho baixo não invalida a execução**, mas pode mostrar que o modelo ainda não tem utilidade. Não confundir “rodou corretamente” com “prevê bem”.
-
-Apresentar à equipe: decisões e limitações; datas e contagens por conjunto; exclusões de fronteira; comparação baseline × modelo na validação e, quando concluído, no teste; matriz de confusão; parâmetros/limiar; versões/hashes; caminho do modelo; comando final realmente implementado; teste de recarga e próximos passos justificados pelos resultados. Não inventar uma taxa de acerto antes da execução.
-
-## 11. Referências e alcance desta revisão
+## 10. Referências e alcance da revisão
 
 - [Preparação didática](prepare_weather.md) e [código de preparação](../scripts/prepare_weather.py).
-- [Auditoria](../reports/dataset_audit.md), [EDA](../reports/eda/eda_report.md) e [README original preservado](dataset/README.md).
-- [Proveniência e semântica temporal](../reports/temporal/source_provenance_report.md).
+- [Auditoria](../reports/dataset_audit.md) e [relatório de EDA](../reports/eda/eda_report.md).
+- [README original do dataset](dataset/README.md).
+- [Relatório de proveniência e semântica temporal](../reports/temporal/source_provenance_report.md).
 - [Revisão da tabela e dos períodos](../reports/project/revisao_tabela_e_periodos.md).
-- [Protocolo anterior, ainda propositivo](../reports/protocol/protocol_proposal.md).
+- [Proposta anterior de protocolo](../reports/protocol/protocol_proposal.md).
+- [Contrato proposto para o backend](integration/backend.md).
 
-Nesta tarefa foram inspecionados arquivos, código, testes e relatórios existentes, conferida a existência das fontes e executada a ajuda do preparador. Não foram instaladas dependências, regenerados dados, executadas divisões, treinados modelos ou alteradas decisões científicas. Somente este guia foi criado.
+Este guia registra o estado verificado em 27/10/2026. Os resultados são de um experimento retrospectivo com dados históricos e não comprovam disponibilidade operacional das entradas, nem desempenho em produção.
+
+**Conclusão:** o primeiro ciclo técnico de treinamento foi concluído, com divisão cronológica, comparação entre baseline e Random Forest, avaliação final registrada, artefatos salvos e testes automatizados aprovados. O desempenho observado ainda apresenta limitações relevantes para a detecção de chuva. A confirmação da semântica temporal e a definição de uma fonte operacional permanecem como próximos passos científicos e de engenharia.
