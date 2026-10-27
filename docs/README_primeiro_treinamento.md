@@ -323,14 +323,14 @@ O script de preparação já registra hash do original, versões e hipótese em 
 - [ ] Explicar que não há treino, divisão ou API implementados e que as métricas ainda não existem.
 - [ ] Encaminhar ao produtor as dúvidas de origem, ou indicar quem dará continuidade à investigação.
 
-### O que o colega deve decidir com a equipe
+### O deve ser decidido com a equipe
 
 - [ ] Aceitar explicitamente o escopo retrospectivo e a hipótese temporal, ou obter evidência da origem antes de seguir.
 - [ ] Confirmar alvo, horizonte, quatro entradas e política de ausência.
 - [ ] Escolher datas e regra de fronteira; registrar cobertura parcial de 2026, se usada.
 - [ ] Confirmar referência, modelo inicial, limiar e métricas para comparar na validação.
 
-### O que o colega deve implementar e executar
+### O deve ser implementado e executado
 
 - [ ] Validar ambiente/dependências e caminhos sem exigir imagens.
 - [ ] Reutilizar a tabela ou gerar nova versão quando necessário, sem sobrescrever fonte.
