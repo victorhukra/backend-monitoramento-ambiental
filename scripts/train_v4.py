@@ -45,6 +45,7 @@ from config import ROOT, WEATHER_FEATURES, settings, WEATHER_TIMEZONE
 TARGET = 'rain_next_hour'
 TRAIN_END = pd.Timestamp('2025-01-01T00:00:00-03:00')
 VALIDATION_END = pd.Timestamp('2026-01-01T00:00:00-03:00')
+CV_VALIDATION_YEARS = [2023, 2024, 2025]
 
 # ---------------------------------------------------------------------------
 # Funções auxiliares
