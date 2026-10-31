@@ -1,3 +1,5 @@
+# Script original arquivado - preservado para referência
+
 """Treinamento experimental para prever chuva na próxima hora (v3).
 
 Usa quatro variáveis meteorológicas em T para prever rain_next_hour.
@@ -37,11 +39,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
+    balanced_accuracy_score,
     brier_score_loss,
     confusion_matrix,
     f1_score,
     fbeta_score,
     log_loss,
+    matthews_corrcoef,
     precision_score,
     recall_score,
     roc_auc_score,
@@ -216,9 +220,11 @@ def split_data(frame):
 def evaluate(model, X, y):
     """Calcula métricas binárias, tratando chuva como classe positiva.
 
-    Mantida com a mesma assinatura e a mesma saída do train.py original.
+    Mantida com a mesma assinatura e compatível com train.py original.
     """
     predictions = model.predict(X)
+    tn, fp, fn, tp = confusion_matrix(y, predictions, labels=[0, 1]).ravel()
+    specificity = float(tn / (tn + fp)) if (tn + fp) > 0 else 0.0
 
     return {
         'accuracy': float(accuracy_score(y, predictions)),
@@ -231,11 +237,15 @@ def evaluate(model, X, y):
         'f1_rain': float(
             f1_score(y, predictions, zero_division=0)
         ),
+        'balanced_accuracy': float(balanced_accuracy_score(y, predictions)),
+        'specificity': specificity,
+        'matthews_corrcoef': float(matthews_corrcoef(y, predictions)),
         'actual_rain': int(np.sum(np.asarray(y) == 1)),
         'predicted_rain': int(np.sum(predictions == 1)),
-        'confusion_matrix_labels_0_1': confusion_matrix(
-            y, predictions, labels=[0, 1]
-        ).tolist(),
+        'confusion_matrix_labels_0_1': [
+            [int(tn), int(fp)],
+            [int(fn), int(tp)],
+        ],
     }
 
 
@@ -324,27 +334,31 @@ def choose_threshold(y, proba, beta=1.0):
 
 
 def build_models():
-    """Baselines e modelos candidatos. Os dois primeiros são os originais."""
+    """Baselines e modelos candidatos.
+    Inclui versões mais robustas dos Random Forests para teste mais pesado.
+    """
     return {
         'baseline': DummyClassifier(strategy='constant', constant=0),
+        # Random Forest original – parâmetros aumentados para maior carga computacional.
         'random_forest': RandomForestClassifier(
-            n_estimators=100,
-            max_depth=8,
-            min_samples_leaf=10,
+            n_estimators=500,
+            max_depth=None,  # deixar árvore crescer até pureza
+            min_samples_leaf=5,
             random_state=42,
-            n_jobs=1,
+            n_jobs=-1,
             class_weight=None,
         ),
         # Prevê sempre a taxa-base de chuva do treino (dá probabilidade).
         'baseline_prior': DummyClassifier(strategy='prior'),
         'logistic': make_pipeline(
             StandardScaler(),
-            LogisticRegression(max_iter=1000, random_state=42),
+            LogisticRegression(max_iter=2000, random_state=42),
         ),
+        # Random Forest balanceado – também com parâmetros mais exigentes.
         'random_forest_balanced': RandomForestClassifier(
-            n_estimators=100,
-            max_depth=8,
-            min_samples_leaf=10,
+            n_estimators=500,
+            max_depth=None,
+            min_samples_leaf=5,
             random_state=42,
             n_jobs=-1,
             class_weight='balanced_subsample',

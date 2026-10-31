@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from scripts.train import (
+from scripts.train_v4 import (
     TARGET,
     TRAIN_END,
     VALIDATION_END,
