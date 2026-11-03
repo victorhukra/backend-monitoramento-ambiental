@@ -1,64 +1,78 @@
-# STATUS — Preparação para colaboração no GitHub
+## Atualização do MVP — 03/11/2026
 
-## Atualização do MVP — 27/10/2026
+O MVP meteorológico evoluiu da preparação da tabela para três execuções documentadas de treinamento e avaliação. O escopo continua sendo classificar a ocorrência de chuva na próxima hora em Londrina/PR, com base em dados meteorológicos horários. O projeto permanece experimental e retrospectivo: ainda não há API, banco de dados, interface ou serviço de previsão em tempo real.
 
-O MVP meteorológico avançou da preparação da tabela para o primeiro experimento de treinamento e avaliação. O escopo continua sendo estimar a ocorrência de chuva na próxima hora em Londrina, utilizando quatro entradas: temperatura, umidade relativa, pressão ao nível do mar e nebulosidade.
+### Dados e objetivo
 
-A tabela experimental contém **59.159 registros**, com 10.120 alvos positivos e 49.039 negativos. O arquivo original permaneceu preservado. A interpretação temporal do alvo ainda depende de confirmação na origem dos dados; portanto, os resultados devem ser tratados como experimentais e retrospectivos, sem alegação de previsão operacional em tempo real.
+- Base preparada: `data/processed/weather_training.csv`, com **59.159 registros**.
+- Classes: **10.120 positivas** (aprox. 17,11%) e **49.039 negativas**.
+- Entradas originais: `temperature_2m`, `relative_humidity_2m`, `pressure_msl` e `cloud_cover`.
+- Alvo: `rain_next_hour`, associado ao timestamp `T+1h`.
+- O conjunto foi fornecido pelo SENAI; a documentação identifica modelos/reanálises do Open-Meteo como fonte meteorológica, sem comprovar que o SENAI tenha realizado a coleta original.
 
-### Treinamento e avaliação
+A interpretação de `rain` como precipitação acumulada na hora anterior ao timestamp ainda depende de confirmação documental na origem. Também não está comprovado que as quatro entradas históricas estariam disponíveis no instante de uma previsão operacional.
 
-Foi implementada a divisão cronológica proposta:
+### Treinamentos documentados
 
-- **Treino:** período anterior a 01/01/2025.
-- **Validação:** ano de 2025.
-- **Teste:** de janeiro a setembro de 2026, respeitando os limites temporais dos alvos.
+| Etapa | Experimento / data | Escopo e situação |
+|---|---|---|
+| Primeiro treinamento | `weather_20261027T173216Z` — 27/10/2026 | Baseline constante e Random Forest original; validação e teste retrospectivo concluídos. |
+| Segundo treinamento | `weather_20261029T140207Z` — 29/10/2026 | Cinco modelos, métricas probabilísticas, tabelas de limiares, recorte de mesmos meses e validação cruzada temporal; avaliação retrospectiva do teste concluída. |
+| Terceira execução | `weather_20261031T112237Z` — 31/10/2026 | Cinco modelos, Random Forests com 500 árvores e sem limite de profundidade; validação e validação cruzada temporal documentadas. O teste de 2026 não foi avaliado nesta rodada. |
+| Código atual — `train_v4.py` | Código fornecido nesta atualização | Adiciona três atributos derivados e eleva os Random Forests para 1.000 árvores. **Ainda não há relatório ou artefatos de uma execução v4 entre os materiais analisados.** O script precisa de correções antes de ser considerado executável/validado. |
 
-Foram treinados dois modelos:
+### Resultados e interpretação
 
-- **Baseline:** classificador que sempre prevê ausência de chuva.
-- **Random Forest:** modelo de classificação utilizado no primeiro experimento.
+Na primeira execução, o Random Forest original obteve no teste retrospectivo (6.551 registros) acurácia de 81,18%, precisão de 59,15%, recall de 33,38% e F1 de 42,68%. Identificou 459 das 1.375 ocorrências de chuva, deixou passar 916 e gerou 317 falsos positivos.
 
-A avaliação final utilizou 6.551 registros do conjunto de teste.
+Na segunda execução, a comparação dos cinco modelos mostrou compromissos diferentes. No limiar 0,50, o Random Forest original teve acurácia de 81,18% e precisão de 59,15%, mas recall de 33,38%. O Random Forest balanceado teve recall de 81,82% e F1 de 57,37%, à custa de 1.422 falsos positivos. As métricas probabilísticas favoreceram o Random Forest original em Brier e log loss, enquanto o balanceado obteve PR-AUC e ROC-AUC ligeiramente maiores.
 
-| Métrica | Baseline | Random Forest |
-|---|---:|---:|
-| Acurácia | 79,01% | 81,18% |
-| Precisão para chuva | 0,00% | 59,15% |
-| Revocação para chuva | 0,00% | 33,38% |
-| F1 para chuva | 0,00% | 42,68% |
+Na terceira execução, a validação de 2025 indicou recall de 0,662 e F1 de 0,512 para o Random Forest balanceado, contra recall de 0,366 e F1 de 0,416 para o Random Forest original. O relatório recomenda considerar o balanceado quando a prioridade for reduzir falsos negativos, mas ressalta o custo operacional e a necessidade de avaliação adicional.
 
-No teste, havia 1.375 casos positivos. O Random Forest identificou 459 deles, deixou de identificar 916 e gerou 317 falsos positivos.
+**Não há vencedor definitivo.** A escolha depende do custo de falsos negativos e falsos positivos, da calibração das probabilidades e do comportamento em um período independente. O teste de janeiro a setembro de 2026 já foi consultado nas duas primeiras execuções; não deve ser reutilizado para escolher modelos, atributos ou limiares.
 
-A acurácia isolada não é suficiente para avaliar a utilidade do modelo, especialmente diante do desequilíbrio entre as classes. Embora o Random Forest tenha superado o baseline em acurácia e identificado parte dos casos de chuva, ainda deixou de detectar a maior parte dos positivos.
+### Situação do código atual `train_v4.py`
 
-Os artefatos do experimento foram salvos localmente em `data/experiments/weather_20261027T173216Z/`, incluindo modelos serializados, manifesto, métricas, previsões de validação e teste e resumo da divisão. Os dados e resultados gerados continuam sujeitos à política de exclusão do Git.
+A versão v4 acrescenta:
+- `temp_humidity`: produto entre temperatura e umidade relativa;
+- `pressure_diff`: diferença da pressão em relação ao registro anterior;
+- `hour_of_day`: hora local extraída do timestamp;
+- Random Forest original e balanceado com `n_estimators=1000`, `max_depth=None` e `min_samples_leaf=5`.
 
-A avaliação do conjunto de teste foi realizada separadamente, sem retreinar os modelos. Esse conjunto deve permanecer reservado para a avaliação deste experimento e não deve orientar ajustes de parâmetros, variáveis ou limiares.
+A revisão estática identificou pontos que precisam ser corrigidos antes de executar/validar essa versão:
 
-### Testes e dependências
+1. `pressure_diff` é calculada antes de ordenar o DataFrame por `time`. Se o CSV não estiver previamente ordenado, a diferença será calculada na ordem incorreta. Ordenar os registros antes de aplicar `.diff()`.
+2. `validation_importance()` percorre os três nomes (`random_forest`, `random_forest_balanced` e `logistic`), mas é chamada passando um dicionário que contém apenas o modelo atual. Isso pode gerar `KeyError` ao acessar os outros modelos. A função deve receber o dicionário completo ou processar somente o modelo recebido.
+3. O parâmetro `beta` é recebido por `run()`, mas não é utilizado no fluxo; `choose_threshold()` também não é chamado. Portanto, a versão atual não seleciona limiares por F-beta, apesar de expor esse parâmetro na linha de comando.
+4. A avaliação opcional do teste grava `metrics_test.json`, mas não gera `predictions_test.csv` nem métricas probabilísticas do teste nesse bloco.
+5. O manifesto registra `features` com as quatro entradas originais e `engineered_features` separadamente. Os modelos, porém, são treinados com as sete colunas; a forma de registrar/carregar a lista completa de atributos deve ser mantida consistente para uma futura inferência.
 
-A suíte automatizada foi executada com sucesso: **42 testes aprovados**.
+Esses pontos são observações da leitura do código, não resultados de execução. Não há evidência fornecida de que a versão v4 tenha sido treinada com sucesso.
 
-As versões de `scikit-learn` e `joblib` utilizadas correspondem às declaradas em `requirements.txt`. Ainda falta validar a instalação em um ambiente limpo para verificar a reprodutibilidade fora do ambiente atual.
+### Testes, dependências e publicação
 
-### Limitações e próximos passos
+Os registros anteriores documentam 42 testes automatizados aprovados para a etapa inicial. Esse resultado histórico não comprova que os testes atuais cubram ou aprovem `train_v4.py`. A instalação das dependências em ambiente limpo também permanecia pendente no STATUS anterior.
 
-1. Atualizar a documentação de acompanhamento para refletir o treinamento e a avaliação realizados.
-2. Validar a instalação das dependências em um ambiente limpo.
-3. Confirmar, junto à origem, o significado temporal da precipitação e a procedência primária dos registros. O SENAI foi identificado como fornecedor da base, sem confirmação de que tenha realizado a coleta original.
-4. Preservar o conjunto de teste já avaliado, sem utilizá-lo para escolher novos parâmetros, variáveis ou limiares.
-5. Manter o projeto como experimento histórico. API, banco de dados, interface e integração GOES não fazem parte desta etapa concluída.
+As regras locais de proteção do Git, os hooks e a documentação de onboarding foram desenvolvidos em etapas anteriores. Antes de publicar novas alterações, conferir o estado atual do índice, ativar os hooks no clone e revisar o destino/branch. Não há confirmação nesta atualização de que as mudanças mais recentes tenham sido enviadas ao remoto.
 
-A conclusão deste primeiro treinamento não certifica o modelo para uso operacional. Caso sejam feitas alterações motivadas pelos resultados do teste, será necessária uma nova avaliação independente para medir o desempenho do procedimento alterado.
+### Próximos passos prioritários
+
+1. Corrigir os problemas identificados em `train_v4.py`, especialmente a ordenação antes de `pressure_diff` e a chamada de `validation_importance()`.
+2. Atualizar/adicionar testes para engenharia de atributos, ordenação temporal, treinamento, importância por permutação, manifesto e carregamento dos modelos.
+3. Executar a v4 em um novo diretório de experimento e registrar o relatório correspondente; manter `--evaluate-test` desativado nesta etapa.
+4. Comparar os resultados da v4 na validação e na validação cruzada temporal com os experimentos anteriores, sem tratar o teste já consultado como avaliação independente.
+5. Definir critérios de seleção do modelo e do limiar considerando o custo de falsos positivos e falsos negativos.
+6. Confirmar a semântica temporal da precipitação, a procedência primária dos dados e a disponibilidade real das entradas.
+7. Reservar um período futuro ainda não utilizado para avaliação independente depois de congelar modelo, atributos e limiar.
+8. Validar a instalação em ambiente limpo e revisar o estado do Git antes de publicar.
 
 ---
 
 ## Resumo geral
 
-O projeto possui uma base de auditoria, análise exploratória, diagnóstico dos dados e investigação preliminar das imagens GOES. No eixo meteorológico, a tabela supervisionada experimental foi preparada e utilizada no primeiro treinamento e na avaliação cronológica de um baseline e de um Random Forest.
+O projeto possui uma base de auditoria, análise exploratória, diagnóstico dos dados e investigação preliminar das imagens GOES. No eixo meteorológico, a tabela supervisionada foi preparada e utilizada em três execuções documentadas de treinamento; o código atual evoluiu para `train_v4.py`, mas ainda precisa de correções e de uma execução documentada.
 
-O experimento representa um avanço metodológico, mas ainda existem incertezas sobre a origem primária dos dados, a semântica temporal da precipitação e a disponibilidade real das variáveis no instante em que uma previsão seria emitida. Portanto, os resultados não demonstram, por si só, capacidade de previsão operacional em tempo real.
+Os resultados continuam experimentais e retrospectivos. Permanecem incertezas sobre a origem primária dos dados, a semântica temporal da precipitação e a disponibilidade real das variáveis no instante em que uma previsão seria emitida. Portanto, ainda não demonstram capacidade de previsão operacional em tempo real.
 
 O trabalho com imagens GOES continua em uma linha exploratória separada. Ainda não há integração validada entre as imagens de satélite e o modelo meteorológico treinado.
 
@@ -66,16 +80,17 @@ A preparação para colaboração no GitHub, as regras locais de proteção de a
 
 ## Implementado
 
-### Dados meteorológicos e primeiro modelo
+### Dados meteorológicos e treinamentos
 
-- Preparação de uma tabela meteorológica com 59.159 registros, quatro variáveis de entrada, horário de referência, horário-alvo e alvo `rain_next_hour`.
+- Preparação de uma tabela meteorológica com 59.159 registros, quatro variáveis originais, horário de referência, horário-alvo e alvo `rain_next_hour`.
 - Preservação do arquivo original utilizado na preparação.
 - Separação cronológica em treino, validação e teste, com limites temporais aplicados também ao horário-alvo.
-- Implementação de `scripts/train.py` para treinar o baseline e o Random Forest, registrar métricas de validação e salvar os artefatos do experimento.
-- Implementação de `scripts/evaluate_test.py` para avaliar o experimento já treinado no conjunto de teste sem realizar novo treinamento.
-- Registro de métricas, previsões, manifesto e resumo da divisão temporal no diretório local do experimento.
-- Testes automatizados para validação de colunas, entradas finitas, alvo binário, probabilidade da classe positiva e limites temporais.
-- Execução da suíte automatizada com 42 testes aprovados.
+- Implementação e execução documentada de três etapas de treinamento: `train.py`, versão v3 e terceira execução registrada em `weather_20261031T112237Z`.
+- Comparação de baseline constante, baseline por prior, regressão logística, Random Forest original e Random Forest balanceado.
+- Avaliação retrospectiva do teste nas duas primeiras execuções; a terceira execução não avaliou o teste.
+- Registro de métricas, previsões, manifesto e resumo da divisão temporal nos diretórios locais dos experimentos, conforme os relatórios.
+- Desenvolvimento de `train_v4.py`, com três atributos derivados e Random Forests de 1.000 árvores; execução ainda não comprovada e correções pendentes.
+- Testes automatizados históricos para validação de colunas, entradas finitas, alvo binário, probabilidade da classe positiva e limites temporais; 42 testes foram aprovados na etapa inicial.
 
 ### Auditoria e exploração de dados
 
@@ -185,7 +200,7 @@ Os limites foram aplicados ao horário da entrada e ao horário-alvo, evitando i
 
 O conjunto de teste contém 6.551 registros, dos quais 1.375 são positivos. Ele representa um período parcial de 2026, não um ano completo.
 
-Resultados do Random Forest no teste:
+Resultado histórico do Random Forest original no primeiro experimento, no teste retrospectivo:
 
 | Métrica | Resultado |
 |---|---:|
@@ -197,9 +212,11 @@ Resultados do Random Forest no teste:
 | Casos de chuva não identificados | 916 |
 | Falsos positivos | 317 |
 
-O baseline que sempre prevê ausência de chuva obteve acurácia de 79,01%, mas não identificou nenhum caso positivo. Esse resultado demonstra por que a acurácia, isoladamente, é insuficiente para avaliar este problema.
+Nas avaliações posteriores, a versão v3 comparou cinco modelos no mesmo período já consultado. No limiar 0,50, o Random Forest balanceado alcançou recall de 81,82% e F1 de 57,37%, mas gerou 1.422 falsos positivos. Esses resultados são retrospectivos e não independentes.
 
-O teste já foi avaliado e não deve ser reutilizado para escolher parâmetros, variáveis ou limiares do modelo atual.
+O baseline que sempre prevê ausência de chuva obteve acurácia de 79,01%, mas não identificou nenhum caso positivo. Isso demonstra por que a acurácia, isoladamente, é insuficiente para avaliar este problema.
+
+O teste de janeiro a setembro de 2026 já foi utilizado nas avaliações anteriores e não deve ser reutilizado para escolher parâmetros, atributos ou limiares da v4.
 
 ### Amostra GOES e validações anteriores
 
@@ -232,6 +249,15 @@ As versões de scikit-learn e joblib utilizadas no experimento correspondem às 
 3. Definir armazenamento externo autorizado para amostras e acervo, se necessário. Não há licença de redistribuição dos dados aprovada nem URL de download configurada.
 4. Ativar o hook em cada clone e exigir revisão por Pull Request na branch principal, conforme o fluxo acordado.
 5. Conferir o índice Git antes de cada commit. `.gitignore` e hooks podem ser contornados; não utilizar `git add -f` para incluir dados nem `--no-verify` para ignorar as verificações.
+
+### Pendências do código atual `train_v4.py`
+
+1. Ordenar os registros por `time` antes de calcular `pressure_diff`.
+2. Corrigir a chamada de `validation_importance()`, que atualmente recebe apenas um modelo, embora a função tente acessar três nomes.
+3. Definir e implementar o uso de `beta`/`choose_threshold()` ou remover o parâmetro se a seleção de limiar não fizer parte do fluxo.
+4. Completar a avaliação opcional do teste, caso seja necessária em uma futura avaliação independente, incluindo previsões e métricas probabilísticas.
+5. Registrar de forma consistente as sete entradas utilizadas pelos modelos e garantir que o mesmo processamento seja aplicado na inferência.
+6. Criar testes específicos para as novas variáveis e executar a versão corrigida antes de atualizar o relatório de treinamento.
 
 ### Pendências científicas do MVP meteorológico
 
