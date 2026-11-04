@@ -3,6 +3,8 @@
 
 **Atualizado em 25/10/2026**
 
+> **Registro histórico:** este guia descreve o estágio do projeto em 25/10/2026, antes dos ciclos de treinamento. Desde então, as versões v4 e v5 foram implementadas; a v4 está em `scripts/archive/`. Para instruções e status atuais, consulte o [README](../../README.md), o [STATUS](../../STATUS.md) e os [relatórios Markdown](training/). As seções de treinamento abaixo são propostas daquele momento e não devem ser usadas como instruções atuais.
+
 O objetivo do projeto é prever a ocorrência de chuva na próxima hora usando quatro informações: temperatura, umidade, pressão atmosférica e nebulosidade.
 
 **Situação atual:** a preparação dos dados está implementada. O arquivo `train.py` e a API ainda não existem no projeto. Portanto, as etapas de treinamento e API abaixo indicam o que falta implementar; seus comandos propostos ainda não podem ser executados com sucesso.

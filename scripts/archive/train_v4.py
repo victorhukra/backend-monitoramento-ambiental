@@ -81,6 +81,8 @@ def load_table(path):
     frame[TARGET] = target.astype('int8')
     for column in WEATHER_FEATURES:
         frame[column] = pd.to_numeric(frame[column], errors='raise')
+    # Derivações temporais dependem da ordem cronológica, não da ordem do CSV.
+    frame = frame.sort_values('time').reset_index(drop=True)
     # --- Engenharia de atributos ---
     # Produto temperatura × umidade (proxy para índice de desconforto)
     frame['temp_humidity'] = frame['temperature_2m'] * frame['relative_humidity_2m']
@@ -91,7 +93,7 @@ def load_table(path):
     # Garantir que não haja NaNs nas novas colunas
     if not np.isfinite(frame[['temp_humidity', 'pressure_diff', 'hour_of_day']].to_numpy()).all():
         raise ValueError('Valores não finitos nas variáveis derivadas')
-    return frame.sort_values('time').reset_index(drop=True)
+    return frame
 
 def split_data(frame):
     """Separa treino, validação e teste respeitando a ordem temporal."""
@@ -194,6 +196,8 @@ def threshold_table(y, proba, extra=()):
 
 def choose_threshold(y, proba, beta=1.0):
     """Limiar que maximiza F‑beta (beta=1 para F1)."""
+    if beta <= 0:
+        raise ValueError('beta deve ser maior que zero')
     y = np.asarray(y)
     best_threshold, best_score = 0.5, -1.0
     for threshold in THRESHOLD_GRID:
@@ -298,7 +302,10 @@ def validation_importance(models, X, y, features):
     if y.nunique() < 2:
         return {}
     importance = {}
-    for name in ('random_forest', 'random_forest_balanced', 'logistic'):
+    eligible = ('random_forest', 'random_forest_balanced', 'logistic')
+    for name in eligible:
+        if name not in models:
+            continue
         result = permutation_importance(
             models[name], X, y,
             scoring='average_precision',
@@ -331,6 +338,8 @@ def run(training_path, output_dir, evaluate_test=False, beta=1.0, rolling_cv=Tru
         raise ValueError('A saída deve ficar dentro de data/experiments')
     if output_dir.exists():
         raise ValueError('A pasta de saída já existe; escolha outra')
+    if beta <= 0:
+        raise ValueError('beta deve ser maior que zero')
     frame = load_table(training_path)
     train, validation, test, split_summary = split_data(frame)
     # Conjunto de atributos inclui os originais e os derivados
@@ -345,15 +354,27 @@ def run(training_path, output_dir, evaluate_test=False, beta=1.0, rolling_cv=Tru
     output_dir.mkdir(parents=True)
     metrics_validation = {}
     thresholds = {}
+    selected_thresholds = {}
+    model_hashes = {}
     predictions_validation = validation[['time', 'target_time', TARGET]].copy()
     for name, model in models.items():
         model.fit(X_train, y_train)
-        joblib.dump(model, output_dir / f'{name}.joblib')
+        model_path = output_dir / f'{name}.joblib'
+        joblib.dump(model, model_path)
+        model_hashes[model_path.name] = hashlib.sha256(model_path.read_bytes()).hexdigest()
         metrics_validation[name] = evaluate(model, X_validation, y_validation)
         proba = positive_probability(model, X_validation)
         prob_metrics = probability_metrics(y_validation, proba)
         thr = threshold_metrics(y_validation, proba, 0.5)
-        thresholds[name] = threshold_table(y_validation, proba, extra=THRESHOLD_GRID)
+        chosen_threshold = choose_threshold(y_validation, proba, beta=beta)
+        selected_thresholds[name] = chosen_threshold
+        thresholds[name] = {
+            'beta': beta,
+            'selected_threshold': chosen_threshold,
+            'selected_metrics': threshold_metrics(y_validation, proba, chosen_threshold),
+            'at_0.5': thr,
+            'table': threshold_table(y_validation, proba, extra=THRESHOLD_GRID),
+        }
         predictions_validation[f'{name}_probability_rain'] = proba
         predictions_validation[f'{name}_prediction'] = model.predict(X_validation)
         # grava métricas de probabilidade separadamente
@@ -364,9 +385,6 @@ def run(training_path, output_dir, evaluate_test=False, beta=1.0, rolling_cv=Tru
             imp = validation_importance({name: model}, X_validation, y_validation, all_features)
             (output_dir / f'importance_{name}.json').write_text(
                 json.dumps(imp.get(name, {}), ensure_ascii=False, indent=2), encoding='utf-8')
-        # Importância por permutação já foi salva individualmente dentro do loop acima.
-        # Não precisamos recomputar aqui para evitar erros com modelos não treinados.
-
 
     split_summary.update({
         'total_rows': len(frame),
@@ -381,11 +399,22 @@ def run(training_path, output_dir, evaluate_test=False, beta=1.0, rolling_cv=Tru
         'numpy': np.__version__,
         'scikit_learn': __import__('sklearn').__version__,
         'joblib': joblib.__version__,
-        'features': list(WEATHER_FEATURES),
+        'features': all_features,
+        'original_features': list(WEATHER_FEATURES),
         'engineered_features': ['temp_humidity', 'pressure_diff', 'hour_of_day'],
         'target': TARGET,
-        'threshold': 0.5,
-        'random_forest_parameters': models['random_forest'].get_params(),
+        'threshold_default': 0.5,
+        'threshold_selection': {'method': 'max_fbeta_on_validation', 'beta': beta,
+                                'selected_by_model': selected_thresholds},
+        'models': {name: model.get_params() for name, model in models.items()},
+        'model_sha256': model_hashes,
+        'training_source_sha256': split_summary['training_source_sha256'],
+        'training_source': str(training_path),
+        'split_method': 'chronological',
+        'timezone': WEATHER_TIMEZONE,
+        'validation_end': VALIDATION_END.isoformat(),
+        'train_end': TRAIN_END.isoformat(),
+        'rolling_cv_enabled': rolling_cv,
         'test_evaluated': evaluate_test,
     }
     (output_dir / 'split_summary.json').write_text(json.dumps(split_summary, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -399,8 +428,21 @@ def run(training_path, output_dir, evaluate_test=False, beta=1.0, rolling_cv=Tru
     if evaluate_test:
         X_test = test[all_features]
         y_test = test[TARGET]
-        metrics_test = {name: evaluate(model, X_test, y_test) for name, model in models.items()}
+        metrics_test = {}
+        predictions_test = test[['time', 'target_time', TARGET]].copy()
+        for name, model in models.items():
+            proba = positive_probability(model, X_test)
+            metrics_test[name] = {
+                **evaluate(model, X_test, y_test),
+                **probability_metrics(y_test, proba),
+                'threshold_metrics_selected_on_validation': threshold_metrics(
+                    y_test, proba, selected_thresholds[name]),
+                'selected_threshold': selected_thresholds[name],
+            }
+            predictions_test[f'{name}_probability_rain'] = proba
+            predictions_test[f'{name}_prediction'] = model.predict(X_test)
         (output_dir / 'metrics_test.json').write_text(json.dumps(metrics_test, ensure_ascii=False, indent=2), encoding='utf-8')
+        predictions_test.to_csv(output_dir / 'predictions_test.csv', index=False)
     print(json.dumps({
         'output_dir': str(output_dir),
         'split': split_summary,

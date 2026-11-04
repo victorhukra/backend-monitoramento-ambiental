@@ -6,16 +6,18 @@ Nosso objetivo é construir um MVP que receba dados meteorológicos e estime **s
 
 - Auditoria e análise exploratória dos dados concluídas.
 - Tabela experimental preparada: **59.159 registros**, com temperatura, umidade, pressão e nebulosidade como entradas.
-- Contratos de integração documentados para as equipes.
-- **Próximo passo:** revisar a tabela juntos e escolher os períodos de treino, validação e teste.
+- Cinco ciclos de treinamento documentados. A v5 comparou 12 configurações de Random Forest em quatro folds cronológicos e três sementes.
+- Pela regra de seleção da v5, o candidato técnico é o Random Forest original sem pesos, com folha mínima 10 e 400 árvores. O balanceado mantém recall maior, mas também mais alarmes falsos e Brier mais alto.
+- O período de 2026 ficou fora da seleção v5. Ele já havia sido consultado em ciclos anteriores e não representa uma avaliação independente.
+- Contratos de integração documentados para as equipes; API, banco e tela ainda não estão implementados.
 
-Ainda não há modelo treinado, API em execução ou integração com banco e tela. As imagens GOES ficam para uma evolução futura; você não precisa baixar o acervo de imagens para trabalhar no MVP atual.
+O Random Forest balanceado identifica mais eventos de chuva e também gera mais alarmes falsos. Ainda não há modelo escolhido para operação nem serviço de previsão em tempo real. As imagens GOES ficam para uma evolução futura; você não precisa baixar o acervo para trabalhar no MVP meteorológico atual.
 
 **Limitação importante:** adotamos a hipótese de que a chuva registrada em T+1h representa a hora seguinte a T. Essa interpretação e a disponibilidade dos dados no instante da previsão ainda precisam de confirmação na origem. Por enquanto, o estudo é histórico e experimental.
 
 ## 1. Preparar o ambiente
 
-Você precisa de **Git, Python 3.12 e acesso ao repositório privado**. No terminal PowerShell:
+Você precisa de **Git, Python compatível com as dependências fixadas e acesso ao repositório privado**. A execução v4 foi validada com Python 3.13.3. No terminal PowerShell:
 
 ```powershell
 git clone https://github.com/victorhukra/backend-monitoramento-ambiental.git
@@ -31,7 +33,7 @@ Se já tem o projeto, use sua pasta existente. Copie `.env.example` somente se a
 
 No Linux/macOS, use `python3 -m venv .venv`, `source .venv/bin/activate` e `cp .env.example .env`. Os comandos Python seguintes são iguais.
 
-As dependências principais são pandas, NumPy e Matplotlib. As versões estão em `requirements.txt`; a instalação limpa dessas versões ainda precisa ser validada em outra máquina.
+As dependências fixadas em `requirements.txt` incluem pandas, NumPy, Matplotlib, scikit-learn e joblib. Os ambientes local e de validação estão com dependências consistentes (`pip check` sem conflitos); a equipe deve repetir a instalação limpa no computador de destino.
 
 ## 2. Indicar onde está o CSV
 
@@ -66,9 +68,36 @@ O original permanece intacto. O script não divide períodos nem treina um model
 
 **Se a tabela já existe, não é necessário gerá-la novamente.** O script evita sobrescritas; para uma nova versão, use `--output data/processed/weather_training_v2.csv`.
 
-Entenda cada passo em [Preparação da tabela](docs/prepare_weather.md). Para nossa próxima conversa, siga o [guia de revisão e escolha dos períodos](reports/project/revisao_tabela_e_periodos.md).
+Entenda cada passo em [Preparação da tabela](docs/prepare_weather.md). A preparação não treina modelos; ela só constrói e documenta a tabela de exemplos.
 
-## 4. Executar os testes
+## 4. Treinar e comparar os modelos
+
+O fluxo atual está no script v5. A v4 foi arquivada em `scripts/archive/` junto às versões anteriores. Com a tabela disponível e o ambiente ativado, execute:
+
+```powershell
+python -B scripts/train_v5.py
+```
+
+A v5 compara 12 configurações nos anos 2022-2025 com três sementes e grava previsões out-of-fold, métricas, joblibs e manifesto. Os quatro modelos finais também foram avaliados uma vez no teste de 2026 depois de congelados; esses resultados retrospectivos não foram usados para selecionar modelos ou limiares. Consulte o [relatório v5](reports/training/fifth_training_report.md) para critérios, resultados e limites da recomendação. Os artefatos e joblibs ficam localmente em `data/experiments/`, ignorados pelo Git.
+
+Para fazer a avaliação retrospectiva dos joblibs salvos de uma execução v5, o comando explícito é:
+
+```powershell
+python -B scripts/train_v5.py --evaluate-test --output-dir data/experiments/weather_v5_20261104T120000Z
+```
+
+O script registra métricas e previsões no experimento e impede a repetição da avaliação na mesma pasta. Este período já foi consultado em ciclos anteriores, então seus resultados não são independentes nem devem orientar a seleção.
+
+Cada execução exige uma pasta de saída nova e não sobrescreve experimentos existentes. A execução completa pode levar vários minutos. As pastas em `data/experiments/` são locais e excluídas do Git; não tente adicioná-las ao repositório.
+
+Relatórios dos treinamentos:
+
+- [Relatório da comparação v5 em Markdown](reports/training/fifth_training_report.md)
+- [Detalhe técnico da v4 em Markdown](reports/training/fourth_training_report.md)
+- [Código de comparação v5](scripts/train_v5.py)
+- [Treinamento histórico v4 arquivado](scripts/archive/train_v4.py)
+
+## 5. Executar os testes
 
 ```powershell
 python -B -m unittest discover -s tests -v
@@ -76,15 +105,20 @@ python -B -m unittest discover -s tests -v
 
 Os testes usam exemplos pequenos e não exigem o CSV real nem as imagens GOES.
 
+Na revisão de 04/11/2026, a suíte completa passou em **51 testes**; `pip check` também passou nos ambientes `.venv` e `.venv-validacao`. Os testes não validam a semântica meteorológica da fonte nem demonstram desempenho operacional.
+
 ## Onde encontrar cada coisa
 
 | Local | Conteúdo |
 |---|---|
 | `config.py` | Caminhos, fuso e nomes das quatro entradas |
 | `scripts/prepare_weather.py` | Preparação da tabela do MVP |
+| `scripts/train_v5.py` | Comparação temporal repetida e registro de artefatos |
+| `scripts/archive/` | Versões históricas dos scripts de treinamento |
 | `tests/` | Verificações do código |
 | `docs/integration/` | Contratos para Backend, Front-end e Banco |
 | `reports/project/` | Propostas e guia para as próximas decisões |
+| `reports/training/` | Relatórios dos ciclos experimentais |
 | `src/data/` | Auditoria, análise exploratória e investigação da origem |
 | `src/features/` | Investigação e piloto GOES |
 | `data/` | Dados e resultados locais, ignorados pelo Git |
