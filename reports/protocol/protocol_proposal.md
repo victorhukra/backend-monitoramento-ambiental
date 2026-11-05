@@ -8,7 +8,7 @@ O acervo permite propor um estudo retrospectivo do acréscimo de informação do
 
 **Fato observado:** a EDA confirmou a continuidade horária do CSV, imagens posteriores à referência, imagens reutilizadas e duas grades. **Interpretação:** usar diretamente a linha meteorológica e seu `image_link` como entradas disponíveis em tempo real seria uma suposição não sustentada. **Hipótese a verificar:** o CSV preserva a semântica e os horários originais da API, sem deslocamentos durante a exportação. **Decisão proposta:** aprovar primeiro uma convenção temporal condicionada à proveniência, um alvo e uma regra de elegibilidade. Se não houver comprovação de disponibilidade, identificar o estudo como retrospectivo, condicionado a hipóteses, sem afirmar desempenho operacional.
 
-Proposta inicial: emissão na hora cheia t; intervalo previsto de uma hora imediatamente seguinte; classificação de qualquer chuva líquida positiva como pergunta principal; região geográfica fixa em torno de Londrina, com máscara própria de cada grade; treino em 2020–2024, validação em 2025 e avaliação final em janeiro–setembro/2026. Todas essas escolhas dependem da confirmação indicada na seção 11. Não foi criado target, recorte, feature, partição ou modelo.
+Proposta inicial: emissão na hora cheia t; intervalo previsto de uma hora imediatamente seguinte; classificação de qualquer chuva líquida positiva como pergunta principal; região geográfica fixa em torno de Londrina, com máscara própria de cada grade; treino em 2020–2024, validação em 2025 e avaliação final em janeiro–setembro/2026. Todas essas escolhas dependem da confirmação indicada na seção 11. Não foi criado alvo, recorte, atributo, partição ou modelo.
 
 Este estágio cria somente este documento. Arquivos originais, código, README do projeto, testes e relatórios anteriores permanecem preservados. Não foi relido o acervo de pixels; as evidências numéricas abaixo provêm dos resultados já existentes.
 
@@ -19,10 +19,10 @@ Os caminhos relativos abaixo são relativos à raiz `outputs/projeto-goes/`. Os 
 | Evidência | Fato observado e limite da evidência |
 |---|---|
 | [reports/audit_results.json](../audit_results.json), campos `csv.rows`, `columns`, `time_min`, `time_max`, `missing_hours`, duplicatas | 59.160 linhas, 22 colunas, 01/01/2020 00h a 30/09/2026 23h, frequência horária, sem lacunas ou duplicatas identificadas. Isso não demonstra disponibilidade em tempo real. |
-| [reports/eda/rain_comparison.json](../eda/rain_comparison.json), `different_rows`; [rain_summary.csv](../eda/rain_summary.csv) | `rain` e `precipitation` são idênticas neste CSV; 49.040 zeros e 10.120 positivos, respectivamente 82,89% e 17,11%. Essa prevalência é descritiva do período inteiro, não a prevalência calculada de um target futuro após elegibilidade. |
+| [reports/eda/rain_comparison.json](../eda/rain_comparison.json), `different_rows`; [rain_summary.csv](../eda/rain_summary.csv) | `rain` e `precipitation` são idênticas neste CSV; 49.040 zeros e 10.120 positivos, respectivamente 82,89% e 17,11%. Essa prevalência é descritiva do período inteiro, não a prevalência calculada de um alvo futuro após elegibilidade. |
 | [reports/eda/goes_temporal_pairings.csv](../eda/goes_temporal_pairings.csv), `delta_seconds`, `direction`, `end_minus_csv_seconds`, `creation_minus_csv_seconds` | 203 pares examinados, 195 capturas posteriores e oito anteriores; desvios entre −5.380 e +4.820 s. Não extrapolar frequências: a seleção incluiu extremos intencionalmente. |
 | [reports/eda/goes_sample_details.json](../eda/goes_sample_details.json), `metadata`, `valid_pixels`, `errors`; [manifesto da amostra](../eda/goes_sample_manifest.csv) | 192 NPZ únicos examinados; quatro sem pixels válidos. Não é estimativa populacional de falhas. |
-| [reports/eda/goes_grids.csv](../eda/goes_grids.csv), `shape`, `grid_signature`, `satellite`, escala/unidade | Duas grades: 885×1217 e 882×1217; GOES-19 nas duas. Nas amostras: int16, K, escala ≈0,06145332, offset ≈89,62000 e fill −1. Não presumir uniformidade no restante do acervo. |
+| [reports/eda/goes_grids.csv](../eda/goes_grids.csv), `formato`, `grid_signature`, `satellite`, escala/unidade | Duas grades: 885×1217 e 882×1217; GOES-19 nas duas. Nas amostras: int16, K, escala ≈0,06145332, offset ≈89,62000 e fill −1. Não presumir uniformidade no restante do acervo. |
 | [reports/eda/image_reuse.csv](../eda/image_reuse.csv), `rows`, `span_hours`; [missing_image_spells.csv](../eda/missing_image_spells.csv) | 67 imagens reutilizadas, 69 referências adicionais; reuso observado até duas horas. 179 linhas sem link e maior bloco de ausência de 39 horas. |
 | [reports/eda/satellite_filename_transitions.csv](../eda/satellite_filename_transitions.csv); [sample_grid_periods.csv](../eda/sample_grid_periods.csv) | Transição nominal para G19 em 07/04/2025 16:00:20,8 UTC. A segunda grade aparece nas amostras de maio/2026 em diante; sua data exata de implantação não foi determinada. |
 | [reports/eda/additional_diagnostics.json](../eda/additional_diagnostics.json), `metadata_offset_values`, `metadata_vs_filename_*` | Metadados amostrados em UTC explícito; diferença entre metadado e início nominal do nome de −0,9 a 0 s. A perda de fração de segundo é uma interpretação compatível, não código de geração comprovado. |
@@ -88,24 +88,24 @@ Notação proposta: t é emissão efetiva; h=1 hora; intervalo alvo I(t)=(t,t+h]
 
 | Alternativa | Significado, variáveis permitidas e compatibilidade | Risco e limite |
 |---|---|---|
-| **R — retrospectiva condicionada** | Emissão nominal t na hora cheia; meteorologia com referência ≤t e suporte temporal terminado até t, sob hipótese explícita de acesso nessa hora. GOES anterior elegível sob latência assumida. Pergunta: há informação adicional do GOES dadas essas entradas históricas? | Reanálise e revisões podem conter informação indisponível em t. Mesmo sem timestamps futuros, não comprova forecast operacional. Adequada como estudo exploratório retrospectivo, não como promessa de uso em tempo real. |
+| **R — retrospectiva condicionada** | Emissão nominal t na hora cheia; meteorologia com referência ≤t e suporte temporal terminado até t, sob hipótese explícita de acesso nessa hora. GOES anterior elegível sob latência assumida. Pergunta: há informação adicional do GOES dadas essas entradas históricas? | Reanálise e revisões podem conter informação indisponível em t. Mesmo sem timestamps futuros, não comprova previsão operacional. Adequada como estudo exploratório retrospectivo, não como promessa de uso em tempo real. |
 | **O — operacional com dados disponíveis** | Emissão efetiva t na hora cheia; para cada variável, versão recebida até t e suporte terminado até t; usar última observação elegível, possivelmente defasada. GOES recebido/processado até t. Preserva a pergunta da próxima hora. | Sem logs/arquivo operacional, não é reproduzível com segurança neste acervo. Defasagens e redução de cobertura podem ser relevantes. É a alternativa necessária para alegação operacional. |
 
-**Mapeamento do alvo, ainda condicional:** se o valor em u resume a hora anterior, o alvo para I(t) virá do registro exato u=t+1h. Se evidência da exportação mostrar que u marca início da hora, virá do registro u=t; nesse caso, rain(u), precipitation(u) e quaisquer campos agregados sobre essa hora não podem entrar como features. A segunda possibilidade é uma contingência documental, não uma afirmação de que esse seja o formato. Em ambos os casos, conferir timestamps exatos, não apenas deslocar linhas. Se a semântica continuar incerta, não construir target.
+**Mapeamento do alvo, ainda condicional:** se o valor em u resume a hora anterior, o alvo para I(t) virá do registro exato u=t+1h. Se evidência da exportação mostrar que u marca início da hora, virá do registro u=t; nesse caso, rain(u), precipitation(u) e quaisquer campos agregados sobre essa hora não podem entrar como atributos. A segunda possibilidade é uma contingência documental, não uma afirmação de que esse seja o formato. Em ambos os casos, conferir timestamps exatos, não apenas deslocar linhas. Se a semântica continuar incerta, não construir alvo.
 
 Adiar emissão de t para t+δ e manter o alvo (t,t+1h] prevê parte de um intervalo já iniciado; isso altera a pergunta. Para continuar prevendo a próxima hora inteira, o alvo deve passar a (t+δ,t+δ+1h]. Com δ não inteiro, o CSV horário pode não permitir reconstruí-lo sem dados mais finos. Não adotar interpolação para contornar esse problema.
 
 **Decisão proposta:** manter emissão na hora cheia; escolher R com limitação explícita se a proveniência permitir o alinhamento, ou obter evidência adicional para O. Não resolver a falta de logs supondo atraso operacional arbitrário.
 
-## 5. Alternativas de definição do target
+## 5. Alternativas de definição do alvo
 
 São definições matemáticas candidatas, não colunas calculadas. R(I) denota chuva líquida e P(I), precipitação total, no intervalo I.
 
 | Opção | Interpretação e vantagens | Desvantagens e avaliação proposta | Informação pendente |
 |---|---|---|---|
-| **A: R(I)>0** | Classificar qualquer chuva líquida positiva registrada; alinhada à pergunta “ocorrência de chuva”. | Sensível à precisão/traços e dominância de zeros. Propor PR-AUC com convenção fixada (por exemplo average precision), precisão, recall, F1, matriz de confusão e Brier/calibração das probabilidades. Acurácia isolada é inadequada. | Semântica do intervalo, resolução efetiva e finalidade prática da detecção. |
+| **A: R(I)>0** | Classificar qualquer chuva líquida positiva registrada; alinhada à pergunta “ocorrência de chuva”. | Sensível à precisão/traços e dominância de zeros. Propor PR-AUC com convenção fixada (por exemplo average precisão), precisão, sensibilidade, F1, matriz de confusão e Brier/calibração das probabilidades. Acurácia isolada é inadequada. | Semântica do intervalo, resolução efetiva e finalidade prática da detecção. |
 | **B: P(I)≥τ**, τ>0 | Classificar intensidade mínima relevante, limiar em mm por hora acumulada. Pode refletir impacto operacional. | Quanto maior τ, menor tende a ser a classe positiva; não estimar sua frequência sem análise própria autorizada. Mesmas métricas de classificação, acrescidas de custos de falsos alarmes/omissões. | Valor de τ, escolha rain versus precipitation e justificativa de domínio. Fixar antes do teste; distinguir ≥ de >. |
-| **C: P(I) em mm** | Regressão da quantidade; preserva intensidade e responde pergunta mais ampla. | Zeros e cauda longa dificultam avaliar extremos; MAE e RMSE têm sensibilidades distintas. Propor erros no conjunto todo, em horas positivas e por faixas pré-definidas, com baseline zero e persistência, sem treinar agora. Uma previsão média baixa pode perder picos. | Se o uso exige quantidade ou ocorrência, custos de erros e unidade/intervalo definitivos. |
+| **C: P(I) em mm** | Regressão da quantidade; preserva intensidade e responde pergunta mais ampla. | Zeros e cauda longa dificultam avaliar extremos; MAE e RMSE têm sensibilidades distintas. Propor erros no conjunto todo, em horas positivas e por faixas pré-definidas, com modelo de referência zero e persistência, sem treinar agora. Uma previsão média baixa pode perder picos. | Se o uso exige quantidade ou ocorrência, custos de erros e unidade/intervalo definitivos. |
 
 **Fato observado:** 17,11% de positivos contemporâneos e igualdade das duas colunas, conforme `rain_summary.csv` e `rain_comparison.json`. **Interpretação:** um classificador sempre seco teria acurácia descritiva de 82,89% nessa distribuição, sem habilidade para detectar chuva. Isso é uma referência aritmética, não resultado de avaliação futura. **Hipótese:** essa proporção pode mudar nas partições/coorte elegível. **Decisão proposta:** opção A como estudo principal de ocorrência; B como alternativa apenas se houver necessidade prática de limiar; C como estudo separado, não substituição automática de classificação.
 
@@ -136,9 +136,9 @@ Ausente, inválida, temporalmente inelegível e metadado desconhecido serão est
 | **B: região geográfica fixa** | Mesma pergunta espacial ao longo do tempo; foco local; cálculo na grade nativa. | Requer geolocalização validada, tamanho da região e regra de seleção de centros/interseção de pixels. Contagens e áreas de pixels podem variar. |
 | **C: grade comum** | Domínio e resolução explicitamente comuns; facilita comparações espaciais. | Introduz interpolação e decisões de resolução, máscara e conservação; maior custo; pode modificar extremos e estatísticas. |
 
-**Fato observado:** duas assinaturas e extensões no README original §8 e em `goes_grids.csv`; GOES-19 usa ambas. **Interpretação:** shape ou nome do satélite não determina localização de um pixel. **Hipótese:** é possível mapear corretamente ambas as grades com os atributos da fonte. **Decisão proposta:** iniciar com B, região fixa centrada nas coordenadas de referência do dataset, após validar a geolocalização. A será comparação técnica opcional; C somente se B não oferecer correspondência suficiente ou se o experimento espacial a exigir.
+**Fato observado:** duas assinaturas e extensões no README original §8 e em `goes_grids.csv`; GOES-19 usa ambas. **Interpretação:** formato ou nome do satélite não determina localização de um pixel. **Hipótese:** é possível mapear corretamente ambas as grades com os atributos da fonte. **Decisão proposta:** iniciar com B, região fixa centrada nas coordenadas de referência do conjunto de dados, após validar a geolocalização. A será comparação técnica opcional; C somente se B não oferecer correspondência suficiente ou se o experimento espacial a exigir.
 
-Raio/contorno não está escolhido. Defini-lo pela escala espacial de interesse e resolução, ou por candidatos pré-definidos examinados somente no desenvolvimento. Nunca selecionar a região que maximiza desempenho no teste. Validar orientação das linhas, centros versus bordas, projeção e unidade das coordenadas com a fonte netCDF; os limites ilustrativos do README sozinhos não certificam uma máscara precisa. Não aplicar índices idênticos às duas grades nem redimensionar para forçar shapes iguais.
+Raio/contorno não está escolhido. Defini-lo pela escala espacial de interesse e resolução, ou por candidatos pré-definidos examinados somente no desenvolvimento. Nunca selecionar a região que maximiza desempenho no teste. Validar orientação das linhas, centros versus bordas, projeção e unidade das coordenadas com a fonte netCDF; os limites ilustrativos do README sozinhos não certificam uma máscara precisa. Não aplicar índices idênticos às duas grades nem redimensionar para forçar formatos iguais.
 
 Regras numéricas propostas para etapa futura:
 
@@ -160,7 +160,7 @@ Regras numéricas propostas para etapa futura:
 | Validação | 01/01/2025 00h ≤t<01/01/2026 00h | Escolhas de desenvolvimento e limiar probabilístico; analisar a transição de satélite. |
 | Teste final | 01/01/2026 00h até a última emissão com alvo futuro inteiramente observado | Avaliação única após congelar decisões; último horário de emissão não é automaticamente o último timestamp do CSV. |
 
-Se confirmada a convenção de soma da hora anterior, o último alvo disponível termina em 30/09/2026 23h local; a última emissão possível para uma hora inteira seria 22h. Isso é dedução condicional, não criação de target. O primeiro instante também depende de haver histórico suficiente para as entradas.
+Se confirmada a convenção de soma da hora anterior, o último alvo disponível termina em 30/09/2026 23h local; a última emissão possível para uma hora inteira seria 22h. Isso é dedução condicional, não criação de alvo. O primeiro instante também depende de haver histórico suficiente para as entradas.
 
 Após validação, é possível propor reajuste final em 2020–2025 com escolhas congeladas, antes de avaliar 2026. Assim, GOES-19 pode estar no ajuste final. Não atualizar com alvos de 2026 durante o teste principal. Eventual avaliação com atualização progressiva seria protocolo distinto. Para investigar robustez sazonal durante desenvolvimento, usar janelas cronológicas expansivas em anos anteriores, sem procurar a divisão que oferece melhor teste.
 
@@ -204,7 +204,7 @@ Critérios de aceite propostos:
 6. Registrar motivos de ausência, idade, reuso e falha sem remover fontes; reconciliar totais de elegíveis/inelegíveis com o número de emissões.
 7. Verificar fronteiras e compartilhamento de identificadores; medir tempo e pico de memória antes de ampliar o processamento.
 
-Esses passos são um plano. Nenhuma feature, máscara, manifesto de piloto ou target foi criado neste estágio.
+Esses passos são um plano. Nenhuma atributo, máscara, manifesto de piloto ou alvo foi criado neste estágio.
 
 ## 10. Riscos de vazamento
 
@@ -215,7 +215,7 @@ Esses passos são um plano. Nenhuma feature, máscara, manifesto de piloto ou ta
 | Uso de rain/precipitation/code do intervalo alvo | Relação contemporânea em `weather_code.csv` | Definir suporte de cada entrada; proibir campos futuros e derivados deles. |
 | Misturar início e fim da hora | Exportação não confirmada | Rastrear origem; mapear alvo por timestamp exato, sem inferência pelo nome. |
 | Imputação/normalização global | Risco futuro, não implementado | Ajustar somente no treino; não reutilizar parâmetros da EDA global. |
-| Escolher features, região, limiar ou latência pelo teste | Risco futuro | Congelar escolhas e orçamento no desenvolvimento. |
+| Escolher atributos, região, limiar ou latência pelo teste | Risco futuro | Congelar escolhas e orçamento no desenvolvimento. |
 | Divisão aleatória, imagem compartilhada, alvo atravessando corte | Reuso observado e horizonte de uma hora | Cortes cronológicos, purga por suporte e verificação de identificadores. |
 | Seleção de coorte favorecendo B | Ausências/invalidade não uniformes | Coorte comum, regras sem alvo futuro e relatório de cobertura. |
 | Confundir nova grade com sinal de chuva | Mudanças temporais observadas | Diagnóstico estratificado; não imputar causalidade ao sensor. |
@@ -228,7 +228,7 @@ Esses passos são um plano. Nenhuma feature, máscara, manifesto de piloto ou ta
 | Natureza do estudo | Retrospectivo condicionado, enquanto faltam logs; operacional somente com evidência adicional | Aceitar essa limitação de escopo ou buscar dados de disponibilidade. |
 | Semântica do CSV | Usar convenção de fim da hora somente se exportação preservada | Requisição/código de coleta e confirmação do produtor; sem isso, manter hipótese explícita e não construir alvo operacional. |
 | Emissão/horizonte | Hora cheia, próxima hora completa | Confirmar objetivo e convenção de bordas. |
-| Target principal | Qualquer chuva líquida positiva; rain como definição semântica | Aprovar A ou escolher B/C; para B, fornecer fundamento e τ. |
+| alvo principal | Qualquer chuva líquida positiva; rain como definição semântica | Aprovar A ou escolher B/C; para B, fornecer fundamento e τ. |
 | Meteorologia permitida | Mesmo conjunto causal para A/B, com versões disponíveis ou hipótese declarada | Disponibilidade por variável, defasagens e eventual exclusão de variáveis não operacionais. |
 | Pareamento GOES | Último fim de captura entre produtos elegíveis; associação derivada rastreável | Logs ou L assumido, Amax e regra de recuo quando produto inválido. |
 | Região espacial | Região geográfica fixa na grade nativa | Contorno/raio, geolocalização, pesos e cobertura mínima válida. |

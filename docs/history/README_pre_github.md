@@ -1,6 +1,6 @@
 # Projeto GOES — auditoria e EDA
 
-Projeto incremental de previsão de chuva na próxima hora em Londrina. Estágios concluídos: auditoria inicial e análise exploratória do CSV completo com amostra estratificada GOES. Nenhum modelo, target, divisão temporal ou tratamento foi implementado.
+Projeto incremental de previsão de chuva na próxima hora em Londrina. Estágios concluídos: auditoria inicial e análise exploratória do CSV completo com amostra estratificada GOES. Nenhum modelo, alvo, divisão temporal ou tratamento foi implementado.
 
 ## Estrutura criada
 
@@ -9,7 +9,7 @@ projeto-goes/
 ├── data/
 │   ├── raw/          # reservado; originais permanecem externos
 │   ├── sample/       # vazio; leitura da amostra em memória
-│   └── processed/    # vazio; nenhum processamento de dataset
+│   └── processed/    # vazio; nenhum processamento do conjunto de dados
 ├── src/data/
 │   ├── audit.py              # estágio 1 preservado
 │   ├── eda.py                # análise e amostragem determinística
@@ -28,13 +28,13 @@ projeto-goes/
 └── requirements.txt
 ```
 
-Os diretórios de dados contêm apenas `.gitkeep`. Tratamento, features, target, divisão temporal, modelos e avaliação continuam pendentes de autorização; não há módulos vazios para eles.
+Os diretórios de dados contêm apenas `.gitkeep`. Tratamento, atributos, alvo, divisão temporal, modelos e avaliação continuam pendentes de autorização; não há módulos vazios para eles.
 
 ## Fontes originais
 
 - CSV: `C:\Users\CANAL\Downloads\Backend_UTFPR\dataset_weather.csv`
 - ZIP: `C:\Users\CANAL\Downloads\dataset_goes.zip`
-- README do dataset: `C:\Users\CANAL\Downloads\Backend_UTFPR\README.md`
+- README do conjunto de dados: `C:\Users\CANAL\Downloads\Backend_UTFPR\README.md`
 - Documento adicional preservado: `C:\Users\CANAL\Downloads\firstprompt.md`
 
 Este README documenta o projeto; não substitui nem modifica o README original. As fontes não foram copiadas, movidas, renomeadas ou extraídas. As instruções do README original foram tratadas como documentação do formato, não como autorização para executar seus exemplos de treinamento ou visualização.
@@ -83,7 +83,7 @@ Relatórios são regenerados em `reports/`; `--output` permite outro diretório.
 
 ## EDA — estágio 2 concluído
 
-Leia [o relatório completo](reports/eda/eda_report.md). Ele separa fatos, hipóteses, limitações e recomendações; contém links para as 12 figuras. Resultados tabulares estão em `reports/eda/`, sem duplicar o dataset original.
+Leia [o relatório completo](reports/eda/eda_report.md). Ele separa fatos, hipóteses, limitações e recomendações; contém links para as 12 figuras. Resultados tabulares estão em `reports/eda/`, sem duplicar o conjunto de dados original.
 
 - CSV reafirmado: 59.160 linhas × 22 colunas, série horária contínua. Rain e precipitation são iguais nesta base: 82,89% de zeros, 17,11% de valores positivos, máximo 18 mm.
 - 131 registros têm rajada abaixo do vento; 1.939 têm radiação positiva com indicador noturno. São suspeitas a investigar, sem correção ou exclusão automática.
@@ -115,7 +115,7 @@ Para reemitir somente o relatório após a EDA, sem ler novamente imagens:
 python src/data/eda_report.py
 ```
 
-O texto interpretativo foi elaborado para o dataset auditado; ao trocar as fontes, revise as conclusões, além de recalcular os números. `run_manifest.json` registra fontes, versões e parâmetros. `tests.txt` registra a execução desta entrega; para atualizar esse registro, capture uma nova execução de unittest antes de reemitir o relatório. Os relatórios do estágio 1 permanecem históricos.
+O texto interpretativo foi elaborado para o conjunto de dados auditado; ao trocar as fontes, revise as conclusões, além de recalcular os números. `run_manifest.json` registra fontes, versões e parâmetros. `tests.txt` registra a execução desta entrega; para atualizar esse registro, capture uma nova execução de unittest antes de reemitir o relatório. Os relatórios do estágio 1 permanecem históricos.
 
 ## Piloto técnico GOES — estágio 4
 
@@ -126,10 +126,10 @@ O estágio 3 documentou a [proposta de protocolo](reports/protocol/protocol_prop
 - Quinze reconstruções em Kelvin e quatro estados explícitos de matriz totalmente inválida. Nenhuma substituição de falha por zero.
 - Das quinze reconstruções, uma tem somente 1,61% dos pixels válidos; as outras catorze não têm fill/não finitos. O relatório esclarece uma divergência entre a descrição da EDA e seu JSON detalhado sobre esse caso parcial.
 - As 19 imagens foram lidas duas vezes sequencialmente, com payloads e diagnósticos idênticos. Sem extração do ZIP e sem novas dependências.
-- 24 testes passaram: oito anteriores e 16 novos, usando matrizes artificiais para reconstrução, fill variável, não finitos, estatísticas, metadados, shapes e reprodutibilidade.
-- **Seleção espacial não validada:** NPZ sem coordenadas por pixel/vetores x/y ou projeção completa. O README fornece limites aproximáveis, mas faltam evidências de centros/bordas, orientação e correspondência ao recorte. Nenhuma máscara ou feature da região de Londrina foi criada. As cinco estatísticas foram testadas apenas em dados artificiais.
+- 24 testes passaram: oito anteriores e 16 novos, usando matrizes artificiais para reconstrução, fill variável, não finitos, estatísticas, metadados, formatos e reprodutibilidade.
+- **Seleção espacial não validada:** NPZ sem coordenadas por pixel/vetores x/y ou projeção completa. O README fornece limites aproximáveis, mas faltam evidências de centros/bordas, orientação e correspondência ao recorte. Nenhuma máscara ou atributo da região de Londrina foi criada. As cinco estatísticas foram testadas apenas em dados artificiais.
 
-Resultados em `reports/pilot/`: `sample_manifest.json`, `image_diagnostics.json`, `image_diagnostics.csv`, `run_manifest.json`, `tests.txt` e `goes_pilot_report.md`. As contagens e faixas físicas são diagnósticos da matriz inteira, não features regionais. Os relatórios dos estágios anteriores continuam preservados.
+Resultados em `reports/pilot/`: `sample_manifest.json`, `image_diagnostics.json`, `image_diagnostics.csv`, `run_manifest.json`, `tests.txt` e `goes_pilot_report.md`. As contagens e faixas físicas são diagnósticos da matriz inteira, não atributos regionais. Os relatórios dos estágios anteriores continuam preservados.
 
 ### Reproduzir o piloto
 
@@ -148,7 +148,7 @@ Para atualizar apenas o texto do relatório, sem ler imagens:
 python -B src/features/pilot.py --report-only
 ```
 
-Próximo requisito técnico: coordenadas/atributos de projeção do netCDF de origem e mapeamento do recorte NPZ por assinatura, ou geolocalização por pixel validada. Depois será possível definir e validar uma região fixa. Target, protocolo temporal final e modelo continuam pendentes de confirmação.
+Próximo requisito técnico: coordenadas/atributos de projeção do netCDF de origem e mapeamento do recorte NPZ por assinatura, ou geolocalização por pixel validada. Depois será possível definir e validar uma região fixa. alvo, protocolo temporal final e modelo continuam pendentes de confirmação.
 
 ## Viabilidade de múltiplos horizontes — estágio 5
 
@@ -156,8 +156,8 @@ O [relatório comparativo](reports/horizons/horizon_feasibility_report.md) inves
 
 Sob a hipótese ainda não confirmada de acumulados da hora anterior, existem respectivamente 59.159, 59.157, 59.154 e 59.153 janelas completas. São contagens estruturais, não alvos criados ou exemplos operacionais confirmados. Apenas 50 links originais passam o filtro necessário de fim/criação nominal até t; disponibilidade real, nova associação causal e qualidade regional continuam pendentes. Isso não limita uma futura associação a 50 casos.
 
-Resultados e parâmetros ficam em `reports/horizons/`, com comparação CSV/JSON e registro de 27 testes aprovados (24 anteriores e três novos). O código `src/data/horizon_feasibility.py` reutiliza a auditoria/EDA, lê o CSV e o índice do ZIP, sem novos pixels. Comandos de reprodução estão no relatório. Nenhum horizonte foi escolhido, nenhum target ou modelo foi criado. A semântica temporal precisa ser comprovada antes da construção dos alvos.
+Resultados e parâmetros ficam em `reports/horizons/`, com comparação CSV/JSON e registro de 27 testes aprovados (24 anteriores e três novos). O código `src/data/horizon_feasibility.py` reutiliza a auditoria/EDA, lê o CSV e o índice do ZIP, sem novos pixels. Comandos de reprodução estão no relatório. Nenhum horizonte foi escolhido, nenhum alvo ou modelo foi criado. A semântica temporal precisa ser comprovada antes da construção dos alvos.
 
 ## Continuidade
 
-Antes da próxima etapa, confirmar a semântica temporal, definir variável/limiar dos alvos candidatos de 1, 3, 6 e 7 horas, instante de emissão, disponibilidade das variáveis, latência/idade máxima de imagens, estratégia espacial e fronteiras temporais. Recomenda-se exigir produto completo disponível até a emissão, não apenas captura iniciada. Capturas futuras e reanálises indisponíveis em tempo real podem causar vazamento. Não usar target como feature, não embaralhar a avaliação temporal, não ajustar transformações fora do treino, não selecionar variáveis pelo teste e não confundir chuva zero com ausência de dados. O projeto para após a análise de viabilidade do estágio 5, aguardando confirmação para qualquer preparação de modelo.
+Antes da próxima etapa, confirmar a semântica temporal, definir variável/limiar dos alvos candidatos de 1, 3, 6 e 7 horas, instante de emissão, disponibilidade das variáveis, latência/idade máxima de imagens, estratégia espacial e fronteiras temporais. Recomenda-se exigir produto completo disponível até a emissão, não apenas captura iniciada. Capturas futuras e reanálises indisponíveis em tempo real podem causar vazamento. Não usar alvo como atributo, não embaralhar a avaliação temporal, não ajustar transformações fora do treino, não selecionar variáveis pelo teste e não confundir chuva zero com ausência de dados. O projeto para após a análise de viabilidade do estágio 5, aguardando confirmação para qualquer preparação de modelo.

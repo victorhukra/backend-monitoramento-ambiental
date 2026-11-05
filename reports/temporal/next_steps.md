@@ -1,6 +1,6 @@
 # Próximas etapas e plano de elegibilidade
 
-Etapa 6 — 15/10/2026. Proposta para discussão; não aplicada ao dataset.
+Etapa 6 — 15/10/2026. Proposta para discussão; não aplicada ao conjunto de dados.
 
 ## Menor tarefa que desbloqueia os alvos
 
@@ -18,7 +18,7 @@ Critério de aceite: demonstrar para linhas específicas o intervalo de origem d
 | 4 | Escolher modalidade retrospectiva ou operacional | Logs e versões disponíveis, ou hipóteses de latência explicitamente identificadas |
 | 5 | Aprovar protocolo de construção futura | Alvos A separados de B, timestamps exatos, tratamento de ausência, fronteiras por H e comparações em mesma coorte |
 
-As etapas 1 e 2 podem ser investigadas independentemente. A etapa 1 desbloqueia a definição dos alvos meteorológicos; as etapas 2–4 são necessárias para o dataset combinado e suas alegações de uso. Nenhuma dessas aprovações foi presumida nesta entrega.
+As etapas 1 e 2 podem ser investigadas independentemente. A etapa 1 desbloqueia a definição dos alvos meteorológicos; as etapas 2–4 são necessárias para o conjunto de dados combinado e suas alegações de uso. Nenhuma dessas aprovações foi presumida nesta entrega.
 
 ## Regra de elegibilidade proposta
 
@@ -41,11 +41,11 @@ Meteorologia precisa de controle paralelo: suporte temporal terminado até t e v
 3. **Geolocalizamos os pixels GOES?** Não. Confirmamos metadados de três representantes e nomes dos originais; a navegação e o recorte ainda não estão validados.
 4. **O que falta para região fixa?** x/y e projeção completos, vínculo do recorte ao original, validação por sensor/grade e definição explícita da região/ponto de referência.
 5. **Qual regra é sustentada?** Não admitir fim/criação depois de t; exigir também disponibilidade documentada, idade máxima e qualidade regional para uma alegação operacional. Latência simulada só sustenta um cenário retrospectivo declarado.
-6. **O que impede os alvos supervisionados?** Falta confirmar qual intervalo cada acumulado representa e aprovar variável/limiar. Disponibilidade e geolocalização são bloqueios adicionais do dataset combinado, não justificativas para confundir target com entrada.
+6. **O que impede os alvos supervisionados?** Falta confirmar qual intervalo cada acumulado representa e aprovar variável/limiar. Disponibilidade e geolocalização são bloqueios adicionais do conjunto de dados combinado, não justificativas para confundir alvo com entrada.
 7. **Menor próxima tarefa?** Recuperar e rastrear o pacote meteorológico original mínimo da seção inicial; solicitar em paralelo o código de recorte GOES se estiver com o mesmo produtor.
 
 ## Verificação desta entrega
 
 Inventário executado com sucesso após corrigir a chamada ao helper existente `scalar`. Suíte preservada: **27 testes aprovados**, saída em `tests.txt`. Não foram introduzidas novas funções de cálculo que exigissem novos testes unitários; o script diagnóstico reutiliza os helpers existentes e contém verificações de limite e preservação. A tentativa de HEAD dos três produtos falhou por DNS e está registrada; não se concluiu ausência no servidor.
 
-Arquivos novos ficam em `reports/temporal/` e `src/data/provenance_inventory.py`. Não houve instalação, extração de ZIP, processamento de pixels em massa, target, features regionais ou modelo. Os relatórios interpretativos devem ser revisados se novas evidências forem adicionadas; executar novamente o inventário não atualiza automaticamente suas conclusões.
+Arquivos novos ficam em `reports/temporal/` e `src/data/provenance_inventory.py`. Não houve instalação, extração de ZIP, processamento de pixels em massa, alvo, atributos regionais ou modelo. Os relatórios interpretativos devem ser revisados se novas evidências forem adicionadas; executar novamente o inventário não atualiza automaticamente suas conclusões.

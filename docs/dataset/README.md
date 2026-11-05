@@ -1,4 +1,4 @@
-# Dataset multimodal meteorológico + GOES
+# Conjunto de dados meteorológicos multimodal + GOES
 
 Este conjunto de dados reúne, em uma mesma linha temporal, **dados meteorológicos horários** e o **caminho para a imagem de satélite GOES correspondente**.
 
@@ -47,7 +47,7 @@ Os dados do Open-Meteo utilizados aqui são dados históricos derivados de model
 
 As imagens são derivadas do **GOES-East Advanced Baseline Imager (ABI)**, distribuídas pela NOAA por meio do NOAA Open Data Dissemination / AWS Open Data.
 
-Neste dataset é utilizado:
+Neste conjunto de dados são utilizadas as seguintes fontes:
 
 - produto: **ABI-L2-MCMIPF**;
 - variável: **CMI_C13**;
@@ -255,7 +255,7 @@ if str(units).lower() in {"k", "kelvin"}:
 else:
     temperature_c = physical
 
-print("Shape:", temperature_c.shape)
+print("Formato:", temperature_c.shape)
 print("Mínimo:", np.nanmin(temperature_c))
 print("Máximo:", np.nanmax(temperature_c))
 ```
@@ -318,7 +318,7 @@ O resultado é uma representação visual da temperatura de brilho do canal infr
 
 ## 7. Abrindo automaticamente a imagem indicada pelo CSV
 
-Uma forma comum de trabalhar com o dataset é selecionar uma linha do CSV e carregar a imagem associada.
+Uma forma comum de trabalhar com o conjunto de dados é selecionar uma linha do CSV e carregar a imagem associada.
 
 ```python
 from pathlib import Path
@@ -343,7 +343,7 @@ with np.load(npz_path, allow_pickle=False) as data:
 
 print("Satélite:", satellite)
 print("Timestamp UTC:", timestamp_utc)
-print("Shape:", raw.shape)
+print("Formato:", raw.shape)
 ```
 
 ---
@@ -374,7 +374,7 @@ sweep_axis        = x
 
 O campo `grid_signature` dentro de cada `.npz` identifica qual grade deve ser utilizada.
 
-As grades presentes neste dataset são:
+As grades presentes neste conjunto de dados são:
 
 ```python
 GRID_INFO = {
@@ -505,7 +505,7 @@ for city, (lon, lat) in CITIES.items():
         transform=ccrs.PlateCarree(),
     )
 
-# Área geral coberta pelo dataset
+# Área geral coberta pelo conjunto de dados
 ax.set_extent(
     [-67.17, -43.17, -32.30, -14.30],
     crs=ccrs.PlateCarree(),
@@ -669,4 +669,4 @@ CSV
           └── visualização / mapas / cidades / fronteiras
 ```
 
-O CSV é o índice principal do dataset. Para cada horário, ele fornece as variáveis meteorológicas e, quando disponível, o caminho da amostra GOES correspondente.
+O CSV é o índice principal do conjunto de dados. Para cada horário, ele fornece as variáveis meteorológicas e, quando disponível, o caminho da amostra GOES correspondente.

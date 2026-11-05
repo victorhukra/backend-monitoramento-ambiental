@@ -17,7 +17,7 @@ Não extrai o ZIP inteiro, não sobrescreve fonte/destino existente e exige amos
 
 **Amostra é uma imagem inteira, não recorte de Londrina nem conjunto representativo de treinamento.** Isso preserva a geografia ainda não comprovada. A amostra real gerada nesta preparação tem 1.455.519 bytes e fica ignorada pelo Git.
 
-Quem não possui o acervo pode executar os testes sintéticos imediatamente. Para o smoke test real, solicite `sample.npz` por armazenamento externo autorizado da equipe e coloque-o em `data/sample/`. Não existe URL pública de dados configurada nem download automático. Confira com o responsável a autorização de distribuição.
+Quem não possui o acervo pode executar os testes sintéticos imediatamente. Para o teste rápido com dados reais, solicite `sample.npz` por armazenamento externo autorizado da equipe e coloque-o em `data/sample/`. Não existe URL pública de dados configurada nem download automático. Confira com o responsável a autorização de distribuição.
 
 ## 4. Alternar para a fonte completa
 

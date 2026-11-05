@@ -10,7 +10,7 @@ Todos os campos são obrigatórios, exceto `model_version`, que fica nulo quando
 
 | Campo | Tipo sugerido | Regra |
 |---|---|---|
-| prediction_id | UUID | Chave primária; gerado pelo Backend |
+| prediction_id | UUID | Chave primária; gerado pelo serviço de retaguarda |
 | created_at | TIMESTAMPTZ | Instante real da gravação; padrão CURRENT_TIMESTAMP |
 | location | VARCHAR(40) | `Londrina-PR` |
 | reference_time | TIMESTAMPTZ | T histórico; não confundir com created_at |
@@ -19,22 +19,23 @@ Todos os campos são obrigatórios, exceto `model_version`, que fica nulo quando
 | horizon_hours | SMALLINT | Igual a 1 |
 | temperature_2m | DOUBLE PRECISION | °C, finito |
 | relative_humidity_2m | DOUBLE PRECISION | %, finito, entre 0 e 100 |
-| pressure_msl | DOUBLE PRECISION | hPa, finito e positivo |
+| pressure_msl | DOUBLE PRECISION | Pressão atual, hPa, finita e positiva |
+| pressure_msl_previous_hour | DOUBLE PRECISION | Pressão em T-1h, hPa, finita e positiva; necessária para reconstruir `pressure_diff` |
 | cloud_cover | DOUBLE PRECISION | %, finito, entre 0 e 100 |
 | rain_probability | DOUBLE PRECISION | Finito, entre 0 e 1 |
 | rain_predicted | BOOLEAN | probability >= decision_threshold |
 | decision_threshold | DOUBLE PRECISION | Finito, entre 0 e 1; proposta inicial 0,5 |
 | mode | VARCHAR(20) | `historical` nesta versão |
 | is_mock | BOOLEAN | Distingue resultado fictício de resultado do modelo |
-| model_version | VARCHAR(80), nullable | Nulo no mock; preenchido quando is_mock=false |
+| model_version | VARCHAR(80), aceita nulo | Nulo na resposta fictícia; preenchido quando `is_mock=false` |
 
-Implementar `NOT NULL`, chave primária e restrições compatíveis com essas regras. Validar finitude também no Backend; não confiar somente no intervalo do tipo numérico. Se necessário para consultas, adicionar índice em `reference_time`. **Não criar UNIQUE por localização/T:** podemos repetir o mesmo instante com modelos ou entradas diferentes. Um POST bem-sucedido corresponde a uma linha.
+Implementar `NOT NULL`, chave primária e restrições compatíveis com essas regras. Validar finitude também no serviço de retaguarda; não confiar somente no intervalo do tipo numérico. Se necessário para consultas, adicionar índice em `reference_time`. **Não criar UNIQUE por localização/T:** podemos repetir o mesmo instante com modelos ou entradas diferentes. Um POST bem-sucedido corresponde a uma linha.
 
-Guardar instantes de forma consistente em UTC; o front-end exibe `America/Sao_Paulo`. Tipos com fuso preservam o instante, não necessariamente a zona original como texto. O contrato fixa a zona de apresentação.
+Guardar instantes de forma consistente em UTC; a interface exibe `America/Sao_Paulo`. Tipos com fuso preservam o instante, não necessariamente a zona original como texto. O contrato fixa a zona de apresentação.
 
-## Contrato recebido pelo Backend
+## Contrato recebido pelo serviço de retaguarda
 
-**POST /predict**, JSON. Os campos de `weather` são mapeados para as quatro colunas numéricas.
+**POST /predict**, JSON. Os campos de `weather` contêm quatro medidas atuais e a pressão em T-1h (cinco valores no total).
 
 ```json
 {
@@ -44,12 +45,13 @@ Guardar instantes de forma consistente em UTC; o front-end exibe `America/Sao_Pa
     "temperature_2m": 24.7,
     "relative_humidity_2m": 74,
     "pressure_msl": 1008.9,
-    "cloud_cover": 97
+    "cloud_cover": 97,
+    "pressure_msl_previous_hour": 1009.4
   }
 }
 ```
 
-## Resposta após persistir — HTTP 201
+## Resposta prevista com o modelo candidato carregado — HTTP 201. Enquanto o serviço retornar uma resposta fictícia, gravar `is_mock=true` e `model_version=null`.
 
 ```json
 {
@@ -63,26 +65,26 @@ Guardar instantes de forma consistente em UTC; o front-end exibe `America/Sao_Pa
   "rain_predicted": true,
   "decision_threshold": 0.5,
   "mode": "historical",
-  "is_mock": true,
-  "model_version": null
+  "is_mock": false,
+  "model_version": "weather-v6-simple-mean-isotonic-v1"
 }
 ```
 
-Exemplo inteiramente ilustrativo. `created_at` é interno ao registro e não precisa aparecer nesta resposta. O UUID e a probabilidade devolvidos devem ser os mesmos persistidos. Com modelo real: `is_mock=false`, versão preenchida, probabilidade calculada. Não comparar resultados fictícios como desempenho de modelo.
+Exemplo inteiramente ilustrativo. `created_at` é interno ao registro e não precisa aparecer nesta resposta. O UUID e a probabilidade devolvidos devem ser os mesmos persistidos. Com o modelo candidato: `is_mock=false`, versão preenchida e probabilidade calculada. Não comparar resultados fictícios como desempenho de modelo.
 
 ## Fluxo de gravação e falhas
 
-1. Backend valida a entrada e calcula/mocka a resposta.
-2. Backend grava todos os campos em uma transação usando consultas parametrizadas.
+1. serviço de retaguarda valida a entrada e calcula a previsão ou devolve uma resposta fictícia.
+2. O serviço de retaguarda grava todos os campos em uma transação usando consultas parametrizadas.
 3. Somente após confirmação da gravação, retorna HTTP 201.
 4. Se persistência/modelo falhar, retorna HTTP 503 com `error.code="PREDICTION_UNAVAILABLE"`, mensagem legível e `error.field=null`, sem dados internos de conexão. Entrada inválida retorna HTTP 422; não cria linha.
 
-O front-end não possui credenciais do banco. Requisições não têm garantia de idempotência neste MVP; retries podem criar outro registro e não devem ocorrer automaticamente. Não é necessário criar tabela de erros ou usuários nesta primeira integração.
+A interface não possui credenciais do banco. Requisições não têm garantia de idempotência neste MVP; tentativas repetidas podem criar outro registro e não devem ocorrer automaticamente. Não é necessário criar tabela de erros ou usuários nesta primeira integração.
 
 ## Tela e entrega da equipe
 
-A tela informa T e quatro medidas; exibe probabilidade, decisão, janela prevista e aviso de mock/histórico. Essa indicação deve corresponder aos campos persistidos, nunca à interpretação do Front-End.
+A tela informa T, quatro medidas atuais e a pressão de T-1h; exibe probabilidade, decisão, janela prevista e aviso de resposta fictícia/previsão histórica. Essa indicação deve corresponder aos campos persistidos, nunca à interpretação da interface.
 
-Entregar um script de criação/migração para o SGBD acordado, instruções locais de conexão e um teste de inserção/consulta. Configurações reais e senhas ficam fora do Git; fornecer apenas exemplo sem segredos. Aceite: o UUID devolvido pela API encontra uma linha com os mesmos valores e instantes, e combinações inválidas são rejeitadas. Alinhar conexão com o Backend; não implementar diretamente chamadas do navegador.
+Entregar um script de criação/migração para o SGBD acordado, instruções locais de conexão e um teste de inserção/consulta. Configurações reais e senhas ficam fora do Git; fornecer apenas exemplo sem segredos. Aceite: o UUID devolvido pela API encontra uma linha com os mesmos valores e instantes, e combinações inválidas são rejeitadas. Alinhar conexão com o serviço de retaguarda; não implementar diretamente chamadas do navegador.
 
-Este documento é uma proposta de esquema. Não cria banco, migração ou serviço. Referências: [Backend](backend.md) e [Front-End](frontend.md).
+Este documento é uma proposta de estrutura. Não cria banco, migração ou serviço. Referências: [serviço de retaguarda](backend.md) e [interface](frontend.md).

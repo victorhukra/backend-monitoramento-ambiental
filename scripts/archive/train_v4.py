@@ -1,3 +1,5 @@
+# Script original arquivado - preservado para referência
+
 """Treinamento experimental versão 4 – inclui engenharia de atributos e modelos mais robustos.
 
 Este script estende `train_v3.py` adicionando recursos derivados (ex.: temperatura × umidade, diferença de pressão, hora do dia) e aumenta o número de árvores nos Random Forests para 1000.
@@ -183,7 +185,7 @@ def threshold_metrics(y, proba, threshold=0.5):
     }
 
 def threshold_table(y, proba, extra=()):
-    """Precisão e recall por limiar."""
+    """Precisão e sensibilidade por limiar."""
     values = sorted({*TABLE_THRESHOLDS, *[round(float(t), 2) for t in extra]})
     rows = []
     for threshold in values:

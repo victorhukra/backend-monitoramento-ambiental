@@ -93,7 +93,7 @@ O mês de janeiro apresenta média de 189,2 mm por mês observado e 30,4% de hor
 
 Acumulados mensais agrupam o timestamp da linha, sem deslocá-lo. Se esse timestamp representa o fim do intervalo anterior, a primeira linha de um mês inclui a última hora do mês anterior. É uma convenção descritiva explícita, a rever antes do target.
 
-## 5. Rain, precipitation, intensidade e códigos
+## 5. Chuva, precipitação, intensidade e códigos
 
 {table(rains)}
 
@@ -178,7 +178,7 @@ Cobertura por link superestima disponibilidade útil quando a matriz é inválid
 
 O protocolo deverá registrar emissão t, horizonte de uma hora, informações comprovadamente disponíveis em t, definição do alvo e fronteiras temporais. Nenhuma partição foi feita.
 
-## 12. Decisões pendentes e opções de target
+## 12. Decisões pendentes e opções de alvo
 
 As opções abaixo são **propostas, não colunas criadas**. Para previsão emitida em t, definir primeiro o intervalo (t,t+1h] e confirmar se o registro em t+1h representa essa acumulação:
 

@@ -136,7 +136,7 @@ Os horários foram mantidos para divisão e auditoria, mas não fazem parte das 
 
 Foram treinadas duas referências:
 
-1. **Baseline sempre seco:** prevê a classe `0` para todas as observações.
+1. **modelo de referência sempre seco:** prevê a classe `0` para todas as observações.
 2. **Random Forest:** configuração fixa, sem busca extensa de parâmetros.
 
 Parâmetros registrados do Random Forest:
@@ -168,15 +168,15 @@ Os 42 testes automatizados passaram nesse ambiente.
 
 ## 5. Resultados
 
-As métricas foram calculadas separadamente na validação e no teste. Precisão, recall e F1 referem-se à classe positiva, isto é, à ocorrência de chuva.
+As métricas foram calculadas separadamente na validação e no teste. Precisão, sensibilidade e F1 referem-se à classe positiva, isto é, à ocorrência de chuva.
 
 ### 5.1. Validação — 2025
 
-| Métrica | Baseline sempre seco | Random Forest |
+| Métrica | modelo de referência sempre seco | Random Forest |
 |---|---:|---:|
 | Acurácia | 84,67% | 85,42% |
 | Precisão da chuva | 0% | 53,53% |
-| Recall da chuva | 0% | 37,23% |
+| sensibilidade da chuva | 0% | 37,23% |
 | F1 da chuva | 0% | 43,92% |
 | Chuvas observadas | 1.343 | 1.343 |
 | Previsões positivas | 0 | 934 |
@@ -185,11 +185,11 @@ O Random Forest melhorou a acurácia e identificou parte das ocorrências de chu
 
 ### 5.2. Teste — janeiro a setembro de 2026
 
-| Métrica | Baseline sempre seco | Random Forest |
+| Métrica | modelo de referência sempre seco | Random Forest |
 |---|---:|---:|
 | Acurácia | 79,01% | 81,18% |
 | Precisão da chuva | 0% | 59,15% |
-| Recall da chuva | 0% | 33,38% |
+| sensibilidade da chuva | 0% | 33,38% |
 | F1 da chuva | 0% | 42,68% |
 | Chuvas observadas | 1.375 | 1.375 |
 | Previsões positivas | 0 | 776 |
@@ -203,9 +203,9 @@ Matriz de confusão do Random Forest no teste, com linhas representando a classe
 
 Portanto, o modelo identificou 459 ocorrências positivas, deixou passar 916 e gerou 317 alarmes falsos.
 
-O baseline sempre seco tem acurácia relativamente alta porque a maioria das observações é negativa. Entretanto, seu recall de chuva é zero, o que o torna inadequado se o objetivo for detectar ocorrências de chuva.
+O modelo de referência sempre seco tem acurácia relativamente alta porque a maioria das observações é negativa. Entretanto, sua sensibilidade de chuva é zero, o que o torna inadequado se o objetivo for detectar ocorrências de chuva.
 
-**Interpretação:** o fluxo técnico foi concluído e o Random Forest superou o baseline nas métricas principais apresentadas. O recall de 33,38% no teste mostra, porém, que o modelo deixou passar aproximadamente dois terços das ocorrências positivas. Não há uma meta mínima de desempenho aprovada, portanto não é possível declarar que o modelo esteja pronto para uso.
+**Interpretação:** o fluxo técnico foi concluído e o Random Forest superou o modelo de referência nas métricas principais apresentadas. A sensibilidade de 33,38% no teste mostra, porém, que o modelo deixou passar aproximadamente dois terços das ocorrências positivas. Não há uma meta mínima de desempenho aprovada, portanto não é possível declarar que o modelo esteja pronto para uso.
 
 O teste cobre somente janeiro a setembro de 2026. Não representa o ano completo e não deve ser descrito como tal.
 
@@ -323,7 +323,7 @@ A preparação da tabela também mantém `weather_training.json`, que documenta 
 - [x] Implementar o treinamento e os testes correspondentes.
 - [x] Validar o ambiente e as dependências em ambiente limpo.
 - [x] Conferir as fronteiras e contagens da divisão cronológica.
-- [x] Treinar o baseline e o Random Forest.
+- [x] Treinar o modelo de referência e o Random Forest.
 - [x] Registrar os resultados da validação.
 - [x] Congelar a configuração e avaliar o teste uma vez.
 - [x] Salvar e recarregar os modelos.
@@ -343,12 +343,12 @@ Esses itens de integração não impedem reconhecer a conclusão do experimento 
 
 - [Preparação didática](prepare_weather.md) e [código de preparação](../scripts/prepare_weather.py).
 - [Auditoria](../reports/dataset_audit.md) e [relatório de EDA](../reports/eda/eda_report.md).
-- [README original do dataset](dataset/README.md).
+- [README original do conjunto de dados](dataset/README.md).
 - [Relatório de proveniência e semântica temporal](../reports/temporal/source_provenance_report.md).
 - [Revisão da tabela e dos períodos](../reports/project/revisao_tabela_e_periodos.md).
 - [Proposta anterior de protocolo](../reports/protocol/protocol_proposal.md).
-- [Contrato proposto para o backend](integration/backend.md).
+- [Contrato proposto para o serviço de retaguarda](integration/backend.md).
 
 Este guia registra o estado verificado em 27/10/2026. Os resultados são de um experimento retrospectivo com dados históricos e não comprovam disponibilidade operacional das entradas, nem desempenho em produção.
 
-**Conclusão:** o primeiro ciclo técnico de treinamento foi concluído, com divisão cronológica, comparação entre baseline e Random Forest, avaliação final registrada, artefatos salvos e testes automatizados aprovados. O desempenho observado ainda apresenta limitações relevantes para a detecção de chuva. A confirmação da semântica temporal e a definição de uma fonte operacional permanecem como próximos passos científicos e de engenharia.
+**Conclusão:** o primeiro ciclo técnico de treinamento foi concluído, com divisão cronológica, comparação entre modelo de referência e Random Forest, avaliação final registrada, artefatos salvos e testes automatizados aprovados. O desempenho observado ainda apresenta limitações relevantes para a detecção de chuva. A confirmação da semântica temporal e a definição de uma fonte operacional permanecem como próximos passos científicos e de engenharia.

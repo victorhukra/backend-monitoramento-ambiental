@@ -2,7 +2,7 @@
 
 ## 1. Objetivo, metodologia e limites
 
-Compreender a base antes de definir o problema de previsão de chuva na próxima hora. **Nenhum target, divisão de treino/teste, imputação, normalização, remoção de outliers ou modelo foi criado.** O CSV completo foi analisado descritivamente. Colunas auxiliares em memória servem apenas aos agrupamentos e não constituem um dataset de treino.
+Compreender a base antes de definir o problema de previsão de chuva na próxima hora. **Nenhum alvo, divisão de treino/teste, imputação, normalização, remoção de outliers ou modelo foi criado.** O CSV completo foi analisado descritivamente. Colunas auxiliares em memória servem apenas aos agrupamentos e não constituem um conjunto de dados de treino.
 
 O projeto existente foi ampliado; `audit.py`, seus testes e os relatórios do estágio 1 foram preservados. As fontes permanecem externas e somente para leitura. A entrada real é `dataset_goes.zip`, não `dataset.zip`. O ZIP foi consultado por seu índice e por leituras seletivas; nenhuma extração foi realizada. Uma matriz por vez, `allow_pickle=False`, máximo de 32 MiB por NPZ e 128 MiB de expansão interna.
 
@@ -53,7 +53,7 @@ Tabela resumida; o CSV anexo inclui também quartis, p1/p5/p95/p99, número de �
 
 Direção do vento é circular: os 16 registros com velocidade zero foram excluídos **somente** do resumo circular/gráfico. Média circular dos demais ≈105,06°, comprimento resultante ≈0,392 (dispersão relevante); distribuição em 16 setores. Isso não atribui significado meteorológico à direção em calmaria e não transforma a base. O CSV original permanece intacto.
 
-Correlação de Pearson calculada apenas para as 17 variáveis quantitativas não circulares; `weather_code`, `wind_direction_10m` e `is_day` foram omitidas da matriz, analisadas separadamente. `rain` e `precipitation` têm correlação 1 porque são iguais. As associações são contemporâneas, descritivas e influenciadas por sazonalidade/autocorrelação; não medem ganho preditivo, causalidade nem justificam seleção de features.
+Correlação de Pearson calculada apenas para as 17 variáveis quantitativas não circulares; `weather_code`, `wind_direction_10m` e `is_day` foram omitidas da matriz, analisadas separadamente. `rain` e `precipitation` têm correlação 1 porque são iguais. As associações são contemporâneas, descritivas e influenciadas por sazonalidade/autocorrelação; não medem ganho preditivo, causalidade nem justificam seleção de atributos.
 
 ## 4. Evolução temporal e sazonalidade
 
@@ -86,9 +86,9 @@ Correlação de Pearson calculada apenas para as 17 variáveis quantitativas nã
 
 O mês de janeiro apresenta média de 189,2 mm por mês observado e 30,4% de horas positivas, contra 39,5 mm e 5,3% em julho. Temperaturas médias por mês do calendário variam aproximadamente de 17,66 °C (junho) a 24,29 °C (dezembro). **Limitação:** há sete ocorrências para jan–set e seis para out–dez; não se trata de uma normal climatológica. Hipóteses para mudanças entre anos incluem variabilidade meteorológica e composição da fonte; a base não permite separar essas causas. Não foram aplicados testes de tendência nem inferidas rupturas causais.
 
-Acumulados mensais agrupam o timestamp da linha, sem deslocá-lo. Se esse timestamp representa o fim do intervalo anterior, a primeira linha de um mês inclui a última hora do mês anterior. É uma convenção descritiva explícita, a rever antes do target.
+Acumulados mensais agrupam o timestamp da linha, sem deslocá-lo. Se esse timestamp representa o fim do intervalo anterior, a primeira linha de um mês inclui a última hora do mês anterior. É uma convenção descritiva explícita, a rever antes do alvo.
 
-## 5. Rain, precipitation, intensidade e códigos
+## 5. Chuva, precipitação, intensidade e códigos
 
 | variable | zero | positive | negative | zero_fraction | positive_fraction | min | max | unique | positive_mean | q0.5 | q0.9 | q0.95 | q0.99 | q0.999 | positive_q0.25 | positive_q0.5 | positive_q0.75 | positive_q0.95 | positive_q0.99 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -97,7 +97,7 @@ Acumulados mensais agrupam o timestamp da linha, sem deslocá-lo. Se esse timest
 
 **Fatos:** ambas são exatamente iguais nas 59160 linhas. Há 49.040 zeros (82,89%) e 10.120 valores positivos (17,11%), com máximo 18 mm, 140 valores distintos e mediana positiva de 0,3 mm. A igualdade neste arquivo não torna suas definições equivalentes em outras bases. O README descreve `rain` como chuva e `precipitation` como precipitação total, ambas em mm.
 
-Blocos exploratórios de horas consecutivas com valor >0 (não são o target e não são uma definição definitiva de tempestade): **2607 blocos**, duração mediana 2 h, máxima 79 h, maior soma 113 mm. Uma hora seca ou lacuna quebra o bloco. Os arquivos registram limites e indicam eventual censura nas bordas. Não há inferência de independência entre esses eventos.
+Blocos exploratórios de horas consecutivas com valor >0 (não são o alvo e não são uma definição definitiva de tempestade): **2607 blocos**, duração mediana 2 h, máxima 79 h, maior soma 113 mm. Uma hora seca ou lacuna quebra o bloco. Os arquivos registram limites e indicam eventual censura nas bordas. Não há inferência de independência entre esses eventos.
 
 | weather_code | rows | rain_min | rain_max | rain_mean | precipitation_mean | positive_fraction | fraction |
 |---|---|---|---|---|---|---|---|
@@ -172,7 +172,7 @@ Todos os metadados esperados foram encontrados nesta amostra. As comparações d
 
 ## 8. Consistência espacial, grades e satélites
 
-| satellite | grid_signature | shape | dtype | units | scale_factor | add_offset | fill_value | images | invalid_min | invalid_max |
+| satellite | grid_signature | formato | dtype | units | scale_factor | add_offset | fill_value | images | invalid_min | invalid_max |
 |---|---|---|---|---|---|---|---|---|---|---|
 | GOES-16 | 44738571aeb9849026fae60a7e0cca4369474a4f1097b01a4e2726ccca746876 | [885, 1217] | int16 | K | 0.06145 | 89.62 | -1 | 147 | 0 | 1077045 |
 | GOES-19 | 44738571aeb9849026fae60a7e0cca4369474a4f1097b01a4e2726ccca746876 | [885, 1217] | int16 | K | 0.06145 | 89.62 | -1 | 31 | 0 | 0 |
@@ -190,11 +190,11 @@ Os limites acima são **apenas primeiras/últimas ocorrências amostradas**, nã
 
 As estatísticas são computáveis na mesma unidade, mas **comparabilidade física plena não está estabelecida**: domínio espacial, grade, calibração e máscara podem mudar. A média da imagem inteira cobre área extensa e pode diluir informação de Londrina.
 
-**Alternativas para discussão:** (1) manter estatísticas de domínio inteiro como baseline, com diagnóstico separado por grade/satélite; (2) definir uma região geográfica fixa em torno de Londrina e selecionar pixels pela geolocalização própria de cada grade; (3) reamostrar ambas para grade comum, com método e custos explícitos. Não usar os mesmos índices de linha/coluna como se fossem a mesma região. Nenhuma opção foi implementada.
+**Alternativas para discussão:** (1) manter estatísticas de domínio inteiro como modelo de referência, com diagnóstico separado por grade/satélite; (2) definir uma região geográfica fixa em torno de Londrina e selecionar pixels pela geolocalização própria de cada grade; (3) reamostrar ambas para grade comum, com método e custos explícitos. Não usar os mesmos índices de linha/coluna como se fossem a mesma região. Nenhuma opção foi implementada.
 
 ## 9. Consistência temporal e disponibilidade operacional
 
-Dos 203 pares amostrados, **195** têm captura posterior à referência, **8** anterior e **0** igual. Mediana 20 s; mínimo -5380 s (−89 min 40 s) e máximo 4820 s (+80 min 20 s). O desvio inicial de 21 s está confirmado. As linhas individuais, inclusive reusos, estão em `goes_temporal_pairings.csv`. Selecionamos intencionalmente extremos; esses percentuais não representam todo o dataset.
+Dos 203 pares amostrados, **195** têm captura posterior à referência, **8** anterior e **0** igual. Mediana 20 s; mínimo -5380 s (−89 min 40 s) e máximo 4820 s (+80 min 20 s). O desvio inicial de 21 s está confirmado. As linhas individuais, inclusive reusos, estão em `goes_temporal_pairings.csv`. Selecionamos intencionalmente extremos; esses percentuais não representam todo o conjunto de dados.
 
 Também foram lidos os timestamps nominais dos nomes de todos os arquivos, sem carregar pixels, apenas para inventário e seleção de casos (`filename_delta_summary.csv`). Não equivalem à validação de todos os metadados. O nome NOAA inclui fim da captura e criação do produto; suas diferenças estão na tabela amostral e **não são horários comprovados de chegada ao sistema do usuário**.
 
@@ -232,16 +232,16 @@ Cobertura por link superestima disponibilidade útil quando a matriz é inválid
 
 ## 11. Riscos de vazamento e protocolo a definir
 
-- Imagens capturadas ou disponibilizadas após a emissão não são features elegíveis, mesmo que o link já esteja no CSV histórico.
-- Reanálises e variáveis acumuladas podem só existir após o instante previsto; confirmar disponibilidade real e versões da fonte. O dataset não contém esse histórico de disponibilização.
-- Nunca usar `rain`/`precipitation` do intervalo futuro como feature. A forte ligação de weather_code com chuva do mesmo registro exige o mesmo cuidado temporal.
+- Imagens capturadas ou disponibilizadas após a emissão não são atributos elegíveis, mesmo que o link já esteja no CSV histórico.
+- Reanálises e variáveis acumuladas podem só existir após o instante previsto; confirmar disponibilidade real e versões da fonte. O conjunto de dados não contém esse histórico de disponibilização.
+- Nunca usar `rain`/`precipitation` do intervalo futuro como atributo. A forte ligação de weather_code com chuva do mesmo registro exige o mesmo cuidado temporal.
 - Ajustar imputadores, escalas e demais transformações somente no treino; nenhuma estatística global desta EDA deve virar parâmetro de transformação do treino.
-- Não selecionar features pelos resultados do teste. Não embaralhar a avaliação temporal ou dividir aleatoriamente.
+- Não selecionar atributos pelos resultados do teste. Não embaralhar a avaliação temporal ou dividir aleatoriamente.
 - Impedir que imagens compartilhadas e janelas sobrepostas atravessem partições; estabelecer margem na fronteira compatível com horizonte, janelas e reuso.
 
 O protocolo deverá registrar emissão t, horizonte de uma hora, informações comprovadamente disponíveis em t, definição do alvo e fronteiras temporais. Nenhuma partição foi feita.
 
-## 12. Decisões pendentes e opções de target
+## 12. Decisões pendentes e opções de alvo
 
 As opções abaixo são **propostas, não colunas criadas**. Para previsão emitida em t, definir primeiro o intervalo (t,t+1h] e confirmar se o registro em t+1h representa essa acumulação:
 
@@ -251,14 +251,14 @@ As opções abaixo são **propostas, não colunas criadas**. Para previsão emit
 | precipitation > 0 no intervalo futuro | Qualquer precipitação total | Igual ao primeiro nesta base, mas conceitualmente inclui outros componentes. |
 | rain ou precipitation ≥ limiar τ | Evento com intensidade mínima relevante | Exige escolher variável, valor, unidade e convenção ≥/>, justificados pela aplicação. Não escolher pelo teste. |
 
-Não foi escolhido τ nem criada `rain_next_hour`. Zero observado, ausência de observação e imagem sem pixels válidos são estados distintos. Decidir também latência e idade máxima da imagem, janela espacial, critérios de qualidade de pixels, tratamento futuro de ausências e regra para imagens reutilizadas nas fronteiras. A regra espacial deve lidar com as duas grades antes de comparar features em massa.
+Não foi escolhido τ nem criada `rain_next_hour`. Zero observado, ausência de observação e imagem sem pixels válidos são estados distintos. Decidir também latência e idade máxima da imagem, janela espacial, critérios de qualidade de pixels, tratamento futuro de ausências e regra para imagens reutilizadas nas fronteiras. A regra espacial deve lidar com as duas grades antes de comparar atributos em massa.
 
 ## 13. Recomendações e próximos passos
 
 1. Validar a semântica temporal e a disponibilidade operacional das fontes com a requisição original e logs, se existirem.
 2. Escolher formalmente alvo, instante de emissão, horizonte e regra de elegibilidade da imagem. Documentar as decisões antes de montar treino.
 3. Decidir região espacial e tratamento de grades, matrizes totalmente inválidas e ausências. Investigar os 131 casos vento/rajada e as convenções de radiação.
-4. Somente após autorização, planejar tratamento e construção do dataset; depois comparação temporal entre baseline meteorológico e alternativa com GOES.
+4. Somente após autorização, planejar tratamento e construção do conjunto de dados; depois comparação temporal entre modelo de referência meteorológico e alternativa com GOES.
 
 **Limitações:** uma localidade, período relativamente curto, origem em reanálise conforme README, unidades do vento não verificadas pela requisição, amostra GOES direcionada, ausência de flags radiométricas e de logs de disponibilidade. Não se sabe ainda se as estatísticas de imagem acrescentam informação preditiva. A EDA não responde essa pergunta.
 
@@ -315,4 +315,4 @@ Tabelas estão nesta pasta: resumo numérico/ano/mês, sazonalidade/ciclo horár
 - [wind_direction.png](../figures/wind_direction.png)
 - [yearly_boxplots.png](../figures/yearly_boxplots.png)
 
-A EDA termina aqui. Tratamento, target, extração em massa, divisão temporal e treinamento aguardam confirmação.
+A EDA termina aqui. Tratamento, alvo, extração em massa, divisão temporal e treinamento aguardam confirmação.

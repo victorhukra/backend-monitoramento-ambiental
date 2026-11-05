@@ -16,7 +16,7 @@ Entregar um **protótipo histórico integrado**, capaz de receber um instante T 
 - Um horizonte inicial proposto: próxima hora. Os horizontes de 3, 6 e 7 horas ficam para uma expansão posterior.
 - Uma representação simples da imagem: cinco estatísticas dos pixels válidos da região, sem rede neural de imagens.
 - Um procedimento de treinamento tabular, executado com e sem GOES para medir seu acréscimo de informação.
-- Uma integração simples entre backend, banco e front-end.
+- Uma integração simples entre serviço de retaguarda, banco e interface.
 
 O prazo mencionado é o dia 3; o mês e a exigência de previsão no horário atual ainda precisam ser confirmados. A entrega aqui proposta é histórica. Se a apresentação exigir operação no presente, aquisição e atualização das entradas passam a ser trabalho adicional, com impacto no prazo.
 
@@ -78,16 +78,16 @@ Podemos liberar o treinamento quando:
 
 Cumprir esses itens conclui a preparação **para o primeiro experimento**, não a validação científica final nem a construção de um serviço em tempo real. Não precisamos processar os 73 GB antes de verificar esse fluxo em um período menor; também não devemos chamar um teste com poucas imagens de avaliação preditiva suficiente.
 
-## 6. Backend, banco e front-end trabalhando em paralelo
+## 6. serviço de retaguarda, banco e interface trabalhando em paralelo
 
 O processamento pesado e o treinamento acontecem previamente. A aplicação não deve abrir o acervo inteiro nem retreinar a cada requisição.
 
 ```text
 Preparação: CSV + NPZ → tabela combinada → treinamento → modelo salvo
-Aplicação: front-end → backend → dados preparados/modelo → resposta e registro no banco
+Aplicação: interface → serviço de retaguarda → dados preparados/modelo → resposta e registro no banco
 ```
 
-**Backend:** preparar entradas, carregar o modelo e calcular a probabilidade. **Banco:** armazenar as entradas/resultados necessários e seus identificadores temporais. **Front-end:** solicitar e apresentar a previsão, mostrando localização, emissão, intervalo futuro e indicação de simulação histórica.
+**serviço de retaguarda:** preparar entradas, carregar o modelo e calcular a probabilidade. **Banco:** armazenar as entradas/resultados necessários e seus identificadores temporais. **interface:** solicitar e apresentar a previsão, mostrando localização, emissão, intervalo futuro e indicação de simulação histórica.
 
 Alinhar primeiro um contrato pequeno: localização, T, horizonte, probabilidade, versão do modelo e estado do resultado. Quando faltarem dados, retornar indisponibilidade, não probabilidade zero. Antes de existir um modelo, uma resposta de exemplo pode apoiar a integração, desde que seja claramente identificada como fictícia.
 

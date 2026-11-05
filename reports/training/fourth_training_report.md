@@ -52,11 +52,11 @@ Compararam-se dois baselines, regressão logística com `StandardScaler` e dois 
 
 ### Classificação no limiar 0,50
 
-| Modelo | Acurácia | Precisão | Recall | F1 | Falsos positivos | Falsos negativos |
+| Modelo | Acurácia | Precisão | sensibilidade | F1 | Falsos positivos | Falsos negativos |
 |---|---:|---:|---:|---:|---:|---:|
-| Baseline sempre seco | 84,67% | 0,00% | 0,00% | 0,00% | 0 | 1.343 |
+| modelo de referência sempre seco | 84,67% | 0,00% | 0,00% | 0,00% | 0 | 1.343 |
 | Random Forest original | 88,62% | 68,44% | 47,80% | 56,29% | 296 | 701 |
-| Baseline por prior | 84,67% | 0,00% | 0,00% | 0,00% | 0 | 1.343 |
+| modelo de referência por prior | 84,67% | 0,00% | 0,00% | 0,00% | 0 | 1.343 |
 | Regressão logística | 84,24% | 47,89% | 31,20% | 37,78% | 456 | 924 |
 | Random Forest balanceado | 86,49% | 54,74% | 68,80% | 60,97% | 764 | 419 |
 
@@ -69,8 +69,8 @@ No limiar 0,50, o balanceado identifica mais chuvas e deixa passar menos eventos
 | Random Forest original | 0,6579 | 0,9044 | 0,0815 | 0,2598 |
 | Random Forest balanceado | 0,6595 | 0,9053 | 0,0940 | 0,2919 |
 | Regressão logística | 0,4371 | 0,8494 | 0,1027 | 0,3178 |
-| Baseline sempre seco | 0,1533 | 0,5000 | 0,1533 | 5,5265 |
-| Baseline por prior | 0,1533 | 0,5000 | 0,1301 | 0,4293 |
+| modelo de referência sempre seco | 0,1533 | 0,5000 | 0,1533 | 5,5265 |
+| modelo de referência por prior | 0,1533 | 0,5000 | 0,1301 | 0,4293 |
 
 O balanceado tem PR-AUC e ROC-AUC ligeiramente maiores; o original tem Brier e log loss menores, indicando probabilidades mais bem avaliadas por essas métricas nesta validação. A diferença não autoriza declarar um modelo final.
 
@@ -80,15 +80,15 @@ Com beta=1, a busca selecionou limiar 0,32 para o Random Forest original (F1=0,6
 
 ## 5. Validação cruzada temporal
 
-Foram usados folds cronológicos de 2023, 2024 e 2025; cada ano é avaliado por um modelo ajustado apenas nos dados anteriores. Média ± desvio-padrão entre os folds:
+Foram usadas partições cronológicas de 2023, 2024 e 2025; cada ano é avaliado por um modelo ajustado apenas nos dados anteriores. Média ± desvio-padrão entre as partições:
 
-| Modelo | PR-AUC | ROC-AUC | Brier | Recall @0,50 | F1 @0,50 |
+| Modelo | PR-AUC | ROC-AUC | Brier | sensibilidade @0,50 | F1 @0,50 |
 |---|---:|---:|---:|---:|---:|
 | Random Forest original | 0,6708 ± 0,0161 | 0,9072 ± 0,0065 | 0,0862 ± 0,0075 | 0,5265 ± 0,0613 | 0,5886 ± 0,0238 |
 | Random Forest balanceado | 0,6712 ± 0,0163 | 0,9078 ± 0,0071 | 0,1014 ± 0,0148 | 0,7396 ± 0,0585 | 0,6304 ± 0,0164 |
 | Regressão logística | 0,4662 ± 0,0205 | 0,8570 ± 0,0085 | 0,1068 ± 0,0068 | 0,4006 ± 0,0713 | 0,4487 ± 0,0525 |
 
-O balanceado conserva recall e F1 mais altos na média dos anos, enquanto o original apresenta Brier médio menor. A validação cruzada informa estabilidade relativa entre os folds, mas não substitui uma avaliação futura intocada.
+O balanceado conserva sensibilidade e F1 mais altos na média dos anos, enquanto o original apresenta Brier médio menor. A validação cruzada informa estabilidade relativa entre as partições, mas não substitui uma avaliação futura intocada.
 
 ## 6. Importância por permutação
 
@@ -115,11 +115,11 @@ Os cinco joblibs foram recarregados e cada um reportou sete entradas. Os hashes 
 - `git diff --check`: aprovado.
 - Integridade do manifesto, hash da fonte e hashes de todos os joblibs: aprovados.
 - Carregamento de todos os cinco joblibs e verificação das sete entradas: aprovado.
-- Execução do treino e dos três folds temporais: concluída.
+- Execução do treino e dos três partições temporais: concluída.
 - Teste de 2026: preservado, sem avaliação.
 
 ## 9. Conclusão e próximos passos
 
-A execução corrigida da v4 está completa para treino, validação e validação cruzada, com artefatos verificáveis. O Random Forest balanceado apresenta melhor recall/F1; o original apresenta melhor calibração segundo Brier/log loss nesta validação. A decisão final depende do custo de falsos alarmes e de eventos não detectados.
+A execução corrigida da v4 está completa para treino, validação e validação cruzada, com artefatos verificáveis. O Random Forest balanceado apresenta melhor sensibilidade/F1; o original apresenta melhor calibração segundo Brier/log loss nesta validação. A decisão final depende do custo de falsos alarmes e de eventos não detectados.
 
-Antes de integração: confirmar a semântica de `rain` na fonte; definir qual modelo e limiar atendem ao uso; reservar dados futuros ainda não consultados para avaliação independente; e garantir que a transformação das sete entradas seja aplicada exatamente igual no backend. A API, a persistência e a interface continuam fora desta execução.
+Antes de integração: confirmar a semântica de `rain` na fonte; definir qual modelo e limiar atendem ao uso; reservar dados futuros ainda não consultados para avaliação independente; e garantir que a transformação das sete entradas seja aplicada exatamente igual no serviço de retaguarda. A API, a persistência e a interface continuam fora desta execução.

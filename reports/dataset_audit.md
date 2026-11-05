@@ -1,7 +1,7 @@
-# Auditoria inicial do dataset GOES
+# Auditoria inicial do conjunto de dados GOES
 
 ## Objetivo e método
-Validar a estrutura, os vínculos e uma leitura numérica. Sem target, tratamento, EDA aprofundada ou treinamento.
+Validar a estrutura, os vínculos e uma leitura numérica. Sem alvo, tratamento, EDA aprofundada ou treinamento.
 CSV lido com pandas; ZIP aberto somente para leitura do índice e de um NPZ em memória. Nenhum arquivo extraído. Estatísticas populacionais (ddof=0).
 ## Fontes e preservação
 | Arquivo original | Bytes |
@@ -43,7 +43,7 @@ Diferenças consecutivas: `{'0 days 01:00:00': 59159}`. Lacunas verificadas na s
 | precipitation | float64 | 0 |
 Valores infinitos numéricos: `{'temperature_2m': 0, 'relative_humidity_2m': 0, 'dew_point_2m': 0, 'apparent_temperature': 0, 'weather_code': 0, 'cloud_cover': 0, 'pressure_msl': 0, 'surface_pressure': 0, 'wind_speed_10m': 0, 'wind_direction_10m': 0, 'wind_gusts_10m': 0, 'shortwave_radiation': 0, 'direct_radiation': 0, 'diffuse_radiation': 0, 'direct_normal_irradiance': 0, 'is_day': 0, 'sunshine_duration': 0, 'soil_moisture_0_to_7cm': 0, 'rain': 0, 'precipitation': 0}`.
 Numéricas: temperature_2m, relative_humidity_2m, dew_point_2m, apparent_temperature, weather_code, cloud_cover, pressure_msl, surface_pressure, wind_speed_10m, wind_direction_10m, wind_gusts_10m, shortwave_radiation, direct_radiation, diffuse_radiation, direct_normal_irradiance, is_day, sunshine_duration, soil_moisture_0_to_7cm, rain, precipitation.
-Texto: time, image_link. weather_code é código categórico apesar do dtype numérico; is_day é binário; wind_direction_10m é circular. time e image_link são referências e exigem tratamento específico. rain e precipitation exigem definição do horizonte/target e da disponibilidade operacional antes de decidir seu uso.
+Texto: time, image_link. weather_code é código categórico apesar do dtype numérico; is_day é binário; wind_direction_10m é circular. time e image_link são referências e exigem tratamento específico. rain e precipitation exigem definição do horizonte/alvo e da disponibilidade operacional antes de decidir seu uso.
 ### Primeiras cinco linhas
 ```text
                time                                                                                                  image_link  temperature_2m  relative_humidity_2m  dew_point_2m  apparent_temperature  weather_code  cloud_cover  pressure_msl  surface_pressure  wind_speed_10m  wind_direction_10m  wind_gusts_10m  shortwave_radiation  direct_radiation  diffuse_radiation  direct_normal_irradiance  is_day  sunshine_duration  soil_moisture_0_to_7cm  rain  precipitation
@@ -184,9 +184,9 @@ Diferença captura − referência: **21.0 segundos**. O desvio deve ser interpr
 - Dados meteorológicos são históricos de modelos/reanálises conforme o README. Verificar quais variáveis estariam disponíveis no instante real de previsão e quais representam acumulações do intervalo.
 - As unidades meteorológicas seguem o README; o CSV sozinho não permite verificar a configuração original da API (inclusive unidade do vento).
 ## Protocolo contra vazamento de informação
-Não usar informação futura nem o target como feature. Não criar target neste estágio. Não embaralhar nem dividir aleatoriamente a avaliação temporal final. Ajustar imputadores, normalizadores e demais transformações apenas no treino. Não usar estatísticas globais de outros períodos para transformar o treino, nem resultados do teste para selecionar variáveis. Não equiparar chuva zero e dado ausente. A EDA descritiva futura pode observar todo o período, mas decisões de modelagem devem respeitar o protocolo temporal.
+Não usar informação futura nem o alvo como atributo. Não criar alvo neste estágio. Não embaralhar nem dividir aleatoriamente a avaliação temporal final. Ajustar imputadores, normalizadores e demais transformações apenas no treino. Não usar estatísticas globais de outros períodos para transformar o treino, nem resultados do teste para selecionar variáveis. Não equiparar chuva zero e dado ausente. A EDA descritiva futura pode observar todo o período, mas decisões de modelagem devem respeitar o protocolo temporal.
 ## Próximos passos, sujeitos a autorização
-Revisar estes achados; definir disponibilidade operacional, horizonte e limiar; depois autorizar a EDA aprofundada, a análise de cobertura temporal e das grades. Só em etapas posteriores: recorte/amostragem, tratamento, features, target, divisão temporal e comparação com baseline meteorológico. Nenhuma dessas etapas foi executada.
+Revisar estes achados; definir disponibilidade operacional, horizonte e limiar; depois autorizar a EDA aprofundada, a análise de cobertura temporal e das grades. Só em etapas posteriores: recorte/amostragem, tratamento, atributos, alvo, divisão temporal e comparação com modelo de referência meteorológico. Nenhuma dessas etapas foi executada.
 ## Ambiente
 ```json
 {

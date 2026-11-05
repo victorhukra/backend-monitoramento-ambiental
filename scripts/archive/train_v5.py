@@ -1,3 +1,5 @@
+# Script original arquivado - preservado para referência
+
 """Comparação rigorosa de Random Forests sob validação temporal repetida.
 
 O período de 2026 fica fora da seleção e do ajuste final. A saída registra
@@ -29,7 +31,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from config import ROOT, WEATHER_FEATURES, WEATHER_TIMEZONE, settings
 from scripts.archive.train_v4 import TARGET, VALIDATION_END, load_table, split_data
 

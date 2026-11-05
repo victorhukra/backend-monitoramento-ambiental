@@ -6,11 +6,11 @@ Etapa 6 — 15/10/2026. **Não foi validada a geolocalização pixel a pixel. Ne
 
 O inventário do projeto e da pasta original não encontrou NetCDF, código produtor dos NPZ, vetores de navegação ou tabela lat/lon. O ZIP contém 59.033 arquivos NPZ e nenhum outro tipo de arquivo. Isso delimita o material examinado, não prova que os originais não existam em outra localização.
 
-Foram selecionados deterministicamente os primeiros nomes, entre os casos válidos já examinados na EDA, de cada par satélite/assinatura: três combinações. Nesta etapa foram abertos somente os metadados desses três NPZ; shapes vêm da EDA, sem releitura dos pixels. As chaves confirmadas são `cmi_c13_raw`, `scale_factor`, `add_offset`, `fill_value`, `units`, `timestamp_utc`, `satellite`, `source_filename`, `source_key` e `grid_signature`.
+Foram selecionados deterministicamente os primeiros nomes, entre os casos válidos já examinados na EDA, de cada par satélite/assinatura: três combinações. Nesta etapa foram abertos somente os metadados desses três NPZ; formatos vêm da EDA, sem releitura dos pixels. As chaves confirmadas são `cmi_c13_raw`, `scale_factor`, `add_offset`, `fill_value`, `units`, `timestamp_utc`, `satellite`, `source_filename`, `source_key` e `grid_signature`.
 
 **Preservados:** identidade do produto, chave de origem, início da aquisição, identificador da grade e escala/unidade/fill. **Ausentes nessas amostras:** x/y, lat/lon, projeção completa, mapeamento do recorte e flags de qualidade originais. Sem código produtor, não se pode afirmar em que etapa esses campos foram descartados, nem se todas as imagens possuem exatamente o mesmo conjunto de chaves.
 
-| Satélite | Assinatura abreviada | Shape da EDA | O que demonstra |
+| Satélite | Assinatura abreviada | Formato da EDA | O que demonstra |
 |---|---|---|---|
 | GOES-16 | 44738571… | 885×1217 | Primeira grade no sensor anterior |
 | GOES-19 | 44738571… | 885×1217 | Mudança de satélite não implica automaticamente mudança de assinatura |
@@ -52,8 +52,8 @@ Se o código de recorte não puder ser recuperado, procurar vetores recortados o
 
 Após comprovar o vínculo, transformar os centros reais para coordenadas geográficas usando os parâmetros efetivos. Validar pontos e orientação, visibilidade geostacionária e consistência da transformação inversa. Definir então uma única região geográfica, com regra de inclusão por centro/interseção e máscaras específicas de cada grade. Registrar número de pixels, cobertura, tolerância de validação e tratamento de bordas. Mesmo com geolocalização válida, a representação de nuvens sobre um elipsoide pode exigir análise adicional de deslocamento aparente por altura; não se assume correção feita.
 
-O README cita aproximadamente −23,304°, −51,186° na descrição meteorológica e usa −23,3045°, −51,1696° no marcador de Londrina do exemplo cartográfico. São referências diferentes: escolher explicitamente ponto/célula ou área de estudo antes de definir raio/contorno. Nenhuma foi promovida a localização exata neste estágio. Não escolher tamanho de região por desempenho no teste e não igualar shapes por redimensionamento.
+O README cita aproximadamente −23,304°, −51,186° na descrição meteorológica e usa −23,3045°, −51,1696° no marcador de Londrina do exemplo cartográfico. São referências diferentes: escolher explicitamente ponto/célula ou área de estudo antes de definir raio/contorno. Nenhuma foi promovida a localização exata neste estágio. Não escolher tamanho de região por desempenho no teste e não igualar formatos por redimensionamento.
 
 ## Resultado e limite
 
-Há rastreabilidade nominal suficiente para solicitar produtos específicos. Não há navegação e mapeamento suficientes para afirmar coordenadas dos pixels NPZ. A unidade Kelvin, o shape e os limites aproximados não resolvem isso. Os dados e relatórios históricos foram preservados; o diagnóstico não gera máscaras, estatísticas regionais ou features.
+Há rastreabilidade nominal suficiente para solicitar produtos específicos. Não há navegação e mapeamento suficientes para afirmar coordenadas dos pixels NPZ. A unidade Kelvin, o formato e os limites aproximados não resolvem isso. Os dados e relatórios históricos foram preservados; o diagnóstico não gera máscaras, estatísticas regionais ou atributos.

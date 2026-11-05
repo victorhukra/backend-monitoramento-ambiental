@@ -4,7 +4,7 @@ Data: 15/10/2026. Estágio 5. **Análise de viabilidade, sem construção de alv
 
 ## 1. Conclusão e escopo
 
-Os quatro horizontes são compatíveis com a resolução horária **se** a emissão ocorrer na hora cheia e a exportação tiver preservado a convenção de acumulação da hora anterior. Há entre 59.153 e 59.159 janelas estruturalmente completas. Nenhum horizonte pode ainda ser declarado operacionalmente viável: não estão comprovados o alinhamento original dos acumulados, a disponibilidade histórica das entradas e a geolocalização necessária às features GOES regionais.
+Os quatro horizontes são compatíveis com a resolução horária **se** a emissão ocorrer na hora cheia e a exportação tiver preservado a convenção de acumulação da hora anterior. Há entre 59.153 e 59.159 janelas estruturalmente completas. Nenhum horizonte pode ainda ser declarado operacionalmente viável: não estão comprovados o alinhamento original dos acumulados, a disponibilidade histórica das entradas e a geolocalização necessária às atributos GOES regionais.
 
 Não há evidência para excluir antecipadamente 3, 6 ou 7 horas, nem para escolher 1 hora como vencedor. A habilidade preditiva e o ganho do GOES continuam não avaliados. A quantidade final de exemplos é **indeterminada**, não zero e não igual às contagens potenciais abaixo.
 
@@ -16,7 +16,7 @@ Foram reutilizados os relatórios da auditoria, EDA, proposta de protocolo e pil
 
 **Documentação externa:** a [Open-Meteo Historical Weather API](https://open-meteo.com/en/docs/historical-weather-api#hourly-parameter-definition), consultada em 15/10/2026, define `rain` e `precipitation` como somas da hora anterior; distingue chuva líquida de precipitação total e informa precisão de 0,1 mm para esta última. Isso sustenta uma hipótese de alinhamento, mas não prova que o CSV manteve essa convenção.
 
-**Hipótese C, não confirmada:** o registro em u contém a quantidade referente a (u−1h,u]. Nesse caso, para emissão efetiva t em hora cheia, definir Q_k como a quantidade registrada no timestamp exato t+k horas, k=1,...,H. Esses valores seriam exclusivamente informações do alvo, jamais features disponíveis em t.
+**Hipótese C, não confirmada:** o registro em u contém a quantidade referente a (u−1h,u]. Nesse caso, para emissão efetiva t em hora cheia, definir Q_k como a quantidade registrada no timestamp exato t+k horas, k=1,...,H. Esses valores seriam exclusivamente informações do alvo, jamais atributos disponíveis em t.
 
 | Tipo | Pergunta | Expressão candidata, sob C |
 |---|---|---|
@@ -33,7 +33,7 @@ Se a proveniência mostrar timestamps de início de intervalo, o mapeamento muda
 
 ## 3. Comparação dos horizontes
 
-As contagens seguintes são **condicionais à hipótese C**. O cálculo procura todos os timestamps exatos t+1,...,t+H; não desloca linhas arbitrariamente. Exige as duas colunas de quantidade finitas e não negativas e verifica a finitude das 20 variáveis numéricas em t. Esse último teste é de completude, não certificação física, seleção de features ou prova de disponibilidade. Os casos suspeitos da EDA continuam pendentes e não foram excluídos.
+As contagens seguintes são **condicionais à hipótese C**. O cálculo procura todos os timestamps exatos t+1,...,t+H; não desloca linhas arbitrariamente. Exige as duas colunas de quantidade finitas e não negativas e verifica a finitude das 20 variáveis numéricas em t. Esse último teste é de completude, não certificação física, seleção de atributos ou prova de disponibilidade. Os casos suspeitos da EDA continuam pendentes e não foram excluídos.
 
 | H | Alvo A candidato | Resolução | Janelas completas / quantidades utilizáveis | Também com meteorologia finita em t | Com link original existente | Sem link | Link passa somente fim/criação nominal ≤t |
 |---|---|---|---:|---:|---:|---:|---:|
@@ -83,7 +83,7 @@ Uma futura falta em qualquer hora da janela impediria afirmar ausência de chuva
 
 Todos os H inteiros cabem na resolução horária; 7 horas não exige interpolação. Porém, os dados não localizam início, duração ou intensidade sub-horária. Se t for 10h15, a janela até 11h15 ou 17h15 não pode ser reconstruída exatamente a partir de acumulados em horas cheias. Adiar t para esperar uma imagem altera a janela futura; não manter silenciosamente o alvo antigo.
 
-O ponto/região de Londrina não representa a chuva ao longo de uma rota de caminhão. A aplicação agrícola exigiria validação local e requisitos agronômicos específicos. Os exemplos motivadores não são capacidades demonstradas pelo dataset. Chuva positiva registrada não define automaticamente risco ou segurança nessas aplicações.
+O ponto/região de Londrina não representa a chuva ao longo de uma rota de caminhão. A aplicação agrícola exigiria validação local e requisitos agronômicos específicos. Os exemplos motivadores não são capacidades demonstradas pelo conjunto de dados. Chuva positiva registrada não define automaticamente risco ou segurança nessas aplicações.
 
 ## 6. Avaliação cronológica e comparação futura
 
@@ -100,13 +100,13 @@ Riscos obrigatórios a controlar:
 - Imagens iniciadas, concluídas, criadas ou recebidas depois da emissão; proximidade temporal não basta.
 - Meteorologia/reanálise cuja versão só foi publicada ou revisada depois de t; timestamp antigo não prova disponibilidade.
 - Rain, precipitation, weather_code ou outros campos referentes ao intervalo futuro como entradas.
-- Imputação, normalização e escolha de features, região, limiar ou hiperparâmetros usando validação indevida ou teste final; ajustes aprendidos apenas no treino, decisões pelo desenvolvimento permitido.
+- Imputação, normalização e escolha de atributos, região, limiar ou hiperparâmetros usando validação indevida ou teste final; ajustes aprendidos apenas no treino, decisões pelo desenvolvimento permitido.
 - Divisão aleatória, duplicatas, janelas-alvo compartilhadas e imagens reutilizadas em períodos diferentes.
 - Comparar modelos em amostras diferentes, confundindo ganho do GOES com seleção de cobertura/qualidade.
 
 ## 7. Reprodutibilidade, testes e preservação
 
-Código: `src/data/horizon_feasibility.py`, reutilizando `fingerprint` da auditoria e `name_time` da EDA. O cálculo salva somente contagens, nunca coluna de target, tabela por emissão ou features. Sem instalações novas, sem nova leitura de pixels e sem cópia do dataset. Os relatórios anteriores permanecem históricos.
+Código: `src/data/horizon_feasibility.py`, reutilizando `fingerprint` da auditoria e `name_time` da EDA. O cálculo salva somente contagens, nunca coluna de alvo, tabela por emissão ou atributos. Sem instalações novas, sem nova leitura de pixels e sem cópia do conjunto de dados. Os relatórios anteriores permanecem históricos.
 
 Da raiz do projeto, com Python, numpy e pandas já disponíveis:
 
@@ -126,6 +126,6 @@ Saídas: `feasibility_counts.json` (fontes, parâmetros, versões e contagens), 
 3. Fixar emissão, inventário de entradas, versões disponíveis e modalidade retrospectiva ou operacional. Obter logs ou arquivo operacional para alegar elegibilidade real.
 4. Resolver geolocalização nas duas grades e definir região, idade máxima e qualidade mínima sem usar resultados de teste.
 5. Só então medir cobertura por associação causal e coortes por H, eventos por período e fronteiras cronológicas. Não extrapolar a qualidade da amostra de pixels para todo o acervo.
-6. Aprovar o desenho antes de construir dataset de treino ou treinar modelos. Não escolher antecipadamente um horizonte.
+6. Aprovar o desenho antes de construir conjunto de dados de treino ou treinar modelos. Não escolher antecipadamente um horizonte.
 
 Fontes locais: README original, §§1–4; `reports/dataset_audit.md`; `reports/eda/eda_report.md`; `reports/eda/goes_sample_details.json`; `reports/protocol/protocol_proposal.md`; `reports/pilot/goes_pilot_report.md` e `image_diagnostics.json`. A ressalva do piloto sobre a imagem parcialmente inválida prevalece sobre a generalização textual anterior da EDA. Fontes externas estão vinculadas junto às definições; não comprovam a proveniência da exportação local.

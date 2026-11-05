@@ -8,7 +8,7 @@
 
 O trabalho não se resume a uma estrutura de pastas: há oito arquivos de implementação, quatro arquivos de testes, análises reproduzíveis, tabelas, manifestos, 12 gráficos e relatórios técnicos. Os principais riscos de validade do experimento foram identificados antes da modelagem. Isso é avanço concreto de pesquisa e engenharia.
 
-Por outro lado, não há dataset supervisionado definitivo, região GOES validada, target aprovado, divisão temporal ou modelo treinado. Ainda não sabemos se o GOES melhora a previsão. Não seria honesto atribuir um percentual de conclusão: a recuperação da proveniência e da geolocalização pode mudar o desenho do estudo.
+Por outro lado, não há conjunto de dados supervisionado definitivo, região GOES validada, alvo aprovado, divisão temporal ou modelo treinado. Ainda não sabemos se o GOES melhora a previsão. Não seria honesto atribuir um percentual de conclusão: a recuperação da proveniência e da geolocalização pode mudar o desenho do estudo.
 
 **Objetivo atual:** investigar se características numéricas GOES acrescentam informação à meteorologia para prever ocorrência de chuva em algum momento das próximas **1, 3, 6 ou 7 horas**, na região de Londrina. Esses horizontes são candidatos, não escolhas definitivas. A comparação futura deve usar os mesmos exemplos e alvos para meteorologia isolada e meteorologia + GOES.
 
@@ -27,8 +27,8 @@ Não foram reexecutados a EDA, o piloto ou o inventário de proveniência, nem r
 | 1 — Auditoria | CSV completo, índice do ZIP, leitura de NPZ, integridade estrutural e preservação | 59.160 linhas × 22 colunas; série horária de janeiro/2020 a setembro/2026; sem lacunas ou timestamps duplicados identificados |
 | 2 — EDA | Distribuições, extremos, consistência física, sazonalidade, chuva, cobertura e análise temporal das imagens | 40 arquivos em `reports/eda/`, 12 figuras e 192 NPZ únicos amostrados; não houve limpeza automática |
 | 3 — Protocolo | Proposta de definição do problema, disponibilidade, prevenção de vazamento e avaliação cronológica | Documento para discussão; não constitui protocolo integralmente aprovado |
-| 4 — Piloto GOES | Leitura seletiva, metadados, máscara de pixels inválidos, reconstrução em Kelvin e repetibilidade | 19 imagens: 15 reconstruções e quatro totalmente inválidas; nenhuma feature regional real |
-| 5 — Horizontes | Contagem por timestamps exatos para 1/3/6/7 horas; diagnóstico dos links originais | Janelas estruturalmente completas sob hipótese temporal; nenhum target criado |
+| 4 — Piloto GOES | Leitura seletiva, metadados, máscara de pixels inválidos, reconstrução em Kelvin e repetibilidade | 19 imagens: 15 reconstruções e quatro totalmente inválidas; nenhuma atributo regional real |
+| 5 — Horizontes | Contagem por timestamps exatos para 1/3/6/7 horas; diagnóstico dos links originais | Janelas estruturalmente completas sob hipótese temporal; nenhum alvo criado |
 | 6 — Proveniência e geolocalização | Busca de código/arquivos de origem, metadados de três representantes e plano de recuperação | Requisição/exportação meteorológica e geolocalização do recorte continuam não comprovadas |
 | Apoio à reunião | Síntese breve para o professor | Documento separado, com perguntas prioritárias; não é evidência de aprovação ou retorno da reunião |
 
@@ -64,7 +64,7 @@ Esses números pressupõem que o registro representa o acumulado da hora anterio
 | `src/features/goes.py` | Leitor e reconstrução C13 reutilizáveis; `PhysicalImage`, validação de metadados/identidade, máscara antes da transformação, unidade Kelvin, estados explícitos de falha, limites de leitura/expansão e `allow_pickle=False` |
 | `src/features/pilot.py` | Seleção pequena de janeiro/2023 com casos dirigidos; duas leituras sequenciais; comparação de payload/diagnósticos; medição de tempo/memória rastreada; manifestos, CSV/JSON e relatório |
 
-O nome `features` não significa que a extração regional esteja pronta. Média, desvio padrão populacional, mínimo, máximo e mediana foram verificados em matrizes artificiais. Nas imagens reais, não houve máscara validada de Londrina nem geração das cinco features regionais.
+O nome `features` não significa que a extração regional esteja pronta. Média, desvio padrão populacional, mínimo, máximo e mediana foram verificados em matrizes artificiais. Nas imagens reais, não houve máscara validada de Londrina nem geração dos cinco atributos regionais.
 
 ### 2.3 Testes e verificação
 
@@ -72,7 +72,7 @@ O nome `features` não significa que a extração regional esteja pronta. Média
 |---|---:|---|
 | `test_audit.py` | 5 | Máscara, Kelvin/unidades, offset temporal, imagem inválida, metadados ausentes |
 | `test_eda.py` | 3 | Nomes NOAA, fração de segundo/virada de ano e blocos interrompidos por lacunas |
-| `test_goes_pilot.py` | 16 | Reconstrução, sentinelas, não finitos, estatísticas sintéticas, shapes, metadados, falhas e reprodutibilidade |
+| `test_goes_pilot.py` | 16 | Reconstrução, sentinelas, não finitos, estatísticas sintéticas, formatos, metadados, falhas e reprodutibilidade |
 | `test_horizon_feasibility.py` | 3 | Timestamps exatos, lacunas, ausências, bordas e índices ambíguos |
 
 **Reexecução em 21/10/2026: 27 testes passaram em 0,084 s**, com Python 3.12.14 e `-B`, sem modificar registros históricos de testes. Os testes não dependem do ZIP original. Não há medição de cobertura de código nem certificação da qualidade de todas as imagens.
@@ -91,7 +91,7 @@ Pacotes auxiliares encontrados em `work/eda-deps`: contourpy 1.4.0, cycler 0.12.
 
 **Pendência de reprodução:** requirements e runtime não são um ambiente único idêntico. Não foi feita nova instalação, atualização ou validação de instalação limpa nesta revisão. A suíte passando não garante que os gráficos rodem no mesmo ambiente sem incluir as dependências da EDA.
 
-Não há uso implementado de scikit-learn, Random Forest, TensorFlow/PyTorch, Cartopy, netCDF4 ou xarray no projeto. Alguns nomes aparecem como propostas ou exemplos do README original; isso não comprova instalação ou implementação. O runtime conferido não detectou scikit-learn. Também não há API web, frontend, banco de dados, serviço de inferência, Docker ou configuração de CI no diretório examinado. O nome do projeto “Backend” não corresponde ainda a um backend de aplicação.
+Não há uso implementado de scikit-learn, Random Forest, TensorFlow/PyTorch, Cartopy, netCDF4 ou xarray no projeto. Alguns nomes aparecem como propostas ou exemplos do README original; isso não comprova instalação ou implementação. O runtime conferido não detectou scikit-learn. Também não há API web, interface, banco de dados, serviço de inferência, Docker ou configuração de CI no diretório examinado. O nome do projeto “serviço de retaguarda” não corresponde ainda a um serviço de retaguarda de aplicação.
 
 ## 3. Estrutura de pastas e arquitetura
 
@@ -118,7 +118,7 @@ projeto-goes/
 ├── data/
 │   ├── raw/.gitkeep                 # reservado; fontes externas
 │   ├── sample/.gitkeep              # reservado; amostras lidas em memória
-│   └── processed/.gitkeep           # sem dataset tratado/supervisionado
+│   └── processed/.gitkeep           # sem conjunto de dados tratado/supervisionado
 ├── src/
 │   ├── data/                       # seis arquivos de análise/diagnóstico
 │   └── features/                   # leitor GOES e piloto, dois arquivos
@@ -136,7 +136,7 @@ projeto-goes/
 
 Os números excluem caches de bytecode e referem-se à inspeção atual. Os diretórios de dados contêm somente `.gitkeep`. `work/eda-deps` está fora da raiz principal, como apoio de execução.
 
-Fontes originais permanecem externas: `C:/Users/CANAL/Downloads/Backend_UTFPR/dataset_weather.csv`, o README dessa pasta e `C:/Users/CANAL/Downloads/dataset_goes.zip`. Nenhuma cópia integral do dataset está no projeto.
+Fontes originais permanecem externas: `C:/Users/CANAL/Downloads/Backend_UTFPR/dataset_weather.csv`, o README dessa pasta e `C:/Users/CANAL/Downloads/dataset_goes.zip`. Nenhuma cópia integral do conjunto de dados está no projeto.
 
 ### 3.3 Como os componentes se conectam
 
@@ -162,13 +162,13 @@ A organização é adequada a uma pesquisa incremental, mas ainda baseada em scr
 - Definir uma localização oficial para documentação de reunião e código, preservando as referências sincronizadas e os históricos.
 - Centralizar caminhos/parâmetros e reduzir dependência de caminhos Windows específicos; Ubuntu está descrito, mas não foi executado nas verificações registradas.
 - Distinguir texto histórico de texto regenerável nos relatórios. O piloto já corrige a generalização da EDA sobre zero pixels inválidos nas demais imagens; o JSON detalhado continha o caso parcial.
-- Considerar versionamento e automação de verificações quando houver necessidade: não há `.git` ou pipeline de CI dentro da raiz principal examinada. Isso não afirma ausência de Git em diretórios externos/ancestrais.
+- Considerar versionamento e automação de verificações quando houver necessidade: não há `.git` ou fluxo de integração contínua dentro da raiz principal examinada. Isso não afirma ausência de Git em diretórios externos/ancestrais.
 
 ### 4.3 Trabalho ainda não implementado
 
-Permanecem ausentes: máscara geográfica validada, extração regional em escala, associação causal definitiva de imagens, tabela supervisionada, target, tratamento/imputação/normalização de treino, divisão treino/validação/teste, modelos, busca de hiperparâmetros, métricas preditivas e comparação meteorologia versus meteorologia + GOES.
+Permanecem ausentes: máscara geográfica validada, extração regional em escala, associação causal definitiva de imagens, tabela supervisionada, alvo, tratamento/imputação/normalização de treino, divisão treino/validação/teste, modelos, busca de hiperparâmetros, métricas preditivas e comparação meteorologia versus meteorologia + GOES.
 
-Essas ausências são em grande parte **limites deliberados das etapas anteriores**, não funcionalidades prometidas e esquecidas. Depois de resolver os bloqueios e aprovar o protocolo, será possível construir o dataset com rastreabilidade, verificar fronteiras temporais e iniciar experimentos. Os ajustes aprendidos deverão usar somente treino e a avaliação deverá preservar a cronologia e o controle de imagens/janelas compartilhadas.
+Essas ausências são em grande parte **limites deliberados das etapas anteriores**, não funcionalidades prometidas e esquecidas. Depois de resolver os bloqueios e aprovar o protocolo, será possível construir o conjunto de dados com rastreabilidade, verificar fronteiras temporais e iniciar experimentos. Os ajustes aprendidos deverão usar somente treino e a avaliação deverá preservar a cronologia e o controle de imagens/janelas compartilhadas.
 
 ## Referências principais para acompanhar o histórico
 

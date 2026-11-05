@@ -1,6 +1,6 @@
-## Atualização do MVP — 04/11/2026
+## Atualização do MVP — 05/11/2026
 
-O MVP meteorológico evoluiu da preparação da tabela para cinco execuções documentadas de treinamento e avaliação. A v5 comparou 12 configurações com validação temporal repetida em quatro anos e três sementes, registrando joblibs, previsões e manifesto. O escopo continua sendo classificar a ocorrência de chuva na próxima hora em Londrina/PR, com base em dados meteorológicos horários. O projeto permanece experimental e retrospectivo: ainda não há API, banco de dados, interface ou serviço de previsão em tempo real.
+O MVP meteorológico evoluiu da preparação da tabela para seis execuções documentadas de treinamento e uma avaliação aninhada v7. A v6 compara três estratégias de pesos de classe e combinações ponderadas; a v7 ajusta calibração, pesos e limiar só em anos anteriores à partição avaliada. O escopo continua sendo classificar a ocorrência de chuva na próxima hora em Londrina/PR, com base em dados meteorológicos horários. O projeto permanece experimental e retrospectivo: ainda não há API, banco de dados, interface ou serviço de previsão em tempo real.
 
 ### Dados e objetivo
 
@@ -16,29 +16,49 @@ A interpretação de `rain` como precipitação acumulada na hora anterior ao ti
 
 | Etapa | Experimento / data | Escopo e situação |
 |---|---|---|
-| Primeiro treinamento | `weather_20261027T173216Z` — 27/10/2026 | Baseline constante e Random Forest original; validação e teste retrospectivo concluídos. |
+| Primeiro treinamento | `weather_20261027T173216Z` — 27/10/2026 | modelo de referência constante e Random Forest original; validação e teste retrospectivo concluídos. |
 | Segundo treinamento | `weather_20261029T140207Z` — 29/10/2026 | Cinco modelos, métricas probabilísticas, tabelas de limiares, recorte de mesmos meses e validação cruzada temporal; avaliação retrospectiva do teste concluída. |
 | Terceira execução | `weather_20261031T112237Z` — 31/10/2026 | Cinco modelos, Random Forests com 500 árvores e sem limite de profundidade; validação e validação cruzada temporal documentadas. O teste de 2026 não foi avaliado nesta rodada. |
 | Quarta execução — v4 | `weather_20261103T190835Z` — 03/11/2026 | Cinco modelos, sete atributos, seleção de limiar na validação e validação cruzada temporal; manifesto/joblibs conferidos. Teste de 2026 preservado. Relatório: `reports/training/fourth_training_report.md`. |
 | Quinta execução — v5 | `weather_v5_20261104T120000Z` — 04/11/2026 | 12 configurações, quatro anos cronológicos, três sementes e bootstrap mensal. Quatro joblibs congelados foram avaliados uma vez no período de 2026; os resultados não foram usados na seleção e são retrospectivos. Métricas, previsões e manifesto registrados. Relatório: `reports/training/fifth_training_report.md`. |
+| Sexta execução — v6 | `weather_v6_20261105T120000Z` — 05/11/2026 | Três Random Forests (original, balanced e balanced_subsample) e quatro combinações ponderadas; quatro partições cronológicas, três sementes, previsões fora da amostra, três joblibs e manifesto. O teste de 2026 não foi avaliado nem usado para seleção ou treinamento nesta versão. Relatório: `reports/training/sixth_training_report.md`. |
+| Avaliação aninhada — v7 | `weather_v7_reassessment_20261105T` — 05/11/2026 | Reavaliação com 180 resultados em partições externas de 2023–2025; comparação de calibração sem ajuste, sigmoide e isotônica, com seleção interna de pesos e limiares para quatro cenários de custo FN:FP. Sem uso do teste de 2026 e sem modelo final selecionado. Relatório: `reports/training/seventh_training_report.md`. |
 
 ### Resultados e interpretação
 
-Na primeira execução, o Random Forest original obteve no teste retrospectivo (6.551 registros) acurácia de 81,18%, precisão de 59,15%, recall de 33,38% e F1 de 42,68%. Identificou 459 das 1.375 ocorrências de chuva, deixou passar 916 e gerou 317 falsos positivos.
+Na primeira execução, o Random Forest original obteve no teste retrospectivo (6.551 registros) acurácia de 81,18%, precisão de 59,15%, sensibilidade de 33,38% e F1 de 42,68%. Identificou 459 das 1.375 ocorrências de chuva, deixou passar 916 e gerou 317 falsos positivos.
 
-Na segunda execução, a comparação dos cinco modelos mostrou compromissos diferentes. No limiar 0,50, o Random Forest original teve acurácia de 81,18% e precisão de 59,15%, mas recall de 33,38%. O Random Forest balanceado teve recall de 81,82% e F1 de 57,37%, à custa de 1.422 falsos positivos. As métricas probabilísticas favoreceram o Random Forest original em Brier e log loss, enquanto o balanceado obteve PR-AUC e ROC-AUC ligeiramente maiores.
+Na segunda execução, a comparação dos cinco modelos mostrou compromissos diferentes. No limiar 0,50, o Random Forest original teve acurácia de 81,18% e precisão de 59,15%, mas sensibilidade de 33,38%. O Random Forest balanceado teve sensibilidade de 81,82% e F1 de 57,37%, à custa de 1.422 falsos positivos. As métricas probabilísticas favoreceram o Random Forest original em Brier e log loss, enquanto o balanceado obteve PR-AUC e ROC-AUC ligeiramente maiores.
 
-Na terceira execução, a validação de 2025 indicou recall de 0,662 e F1 de 0,512 para o Random Forest balanceado, contra recall de 0,366 e F1 de 0,416 para o Random Forest original. O relatório recomenda considerar o balanceado quando a prioridade for reduzir falsos negativos, mas ressalta o custo operacional e a necessidade de avaliação adicional.
+Na terceira execução, a validação de 2025 indicou sensibilidade de 0,662 e F1 de 0,512 para o Random Forest balanceado, contra sensibilidade de 0,366 e F1 de 0,416 para o Random Forest original. O relatório recomenda considerar o balanceado quando a prioridade for reduzir falsos negativos, mas ressalta o custo operacional e a necessidade de avaliação adicional.
 
 **Não há vencedor definitivo.** A escolha depende do custo de falsos negativos e falsos positivos, da calibração das probabilidades e do comportamento em um período independente. O teste de janeiro a setembro de 2026 já foi consultado nas duas primeiras execuções; não deve ser reutilizado para escolher modelos, atributos ou limiares.
 
-Na quarta execução (v4), no limiar 0,50 da validação de 2025, o Random Forest original teve acurácia de 88,62%, precisão de 68,44%, recall de 47,80% e F1 de 56,29%. O Random Forest balanceado teve acurácia de 86,49%, precisão de 54,74%, recall de 68,80% e F1 de 60,97%. Na validação cruzada por anos, o balanceado teve recall médio de 0,740 e F1 médio de 0,630; o original teve Brier médio menor (0,086 contra 0,101). São resultados de desenvolvimento, não uma avaliação independente futura.
+Na quarta execução (v4), no limiar 0,50 da validação de 2025, o Random Forest original teve acurácia de 88,62%, precisão de 68,44%, sensibilidade de 47,80% e F1 de 56,29%. O Random Forest balanceado teve acurácia de 86,49%, precisão de 54,74%, sensibilidade de 68,80% e F1 de 60,97%. Na validação cruzada por anos, o balanceado teve sensibilidade média de 0,740 e F1 médio de 0,630; o original teve Brier médio menor (0,086 contra 0,101). São resultados de desenvolvimento, não uma avaliação independente futura.
 
-Na v5, pela regra pré-registrada de PR-AUC com desempate por Brier, o candidato técnico foi o Random Forest original com folha mínima 10 e 400 árvores (PR-AUC média 0,67198; Brier 0,08860; recall @0,50 0,54255). O `balanced_subsample` com folha 10 teve PR-AUC média 0,67268, Brier 0,11695 e recall 0,81075. Na comparação controlada com folha 5 e 400 árvores, o bootstrap mensal não distinguiu PR-AUC com clareza (delta +0,00117; IC95% -0,00155 a +0,00409), mas confirmou maior recall e pior Brier para a variante balanceada. A recomendação técnica favorece o original quando se priorizam probabilidade mais confiável e menos alarmes falsos; o balanceado é alternativa quando a prioridade é reduzir chuvas não detectadas.
+Na v5, pela regra pré-registrada de PR-AUC com desempate por Brier, o candidato técnico foi o Random Forest original com folha mínima 10 e 400 árvores (PR-AUC média 0,67198; Brier 0,08860; sensibilidade @0,50 0,54255). O `balanced_subsample` com folha 10 teve PR-AUC média 0,67268, Brier 0,11695 e sensibilidade 0,81075. Na comparação controlada com folha 5 e 400 árvores, o bootstrap mensal não distinguiu PR-AUC com clareza (delta +0,00117; IC95% -0,00155 a +0,00409), mas confirmou maior sensibilidade e pior Brier para a variante balanceada. A recomendação técnica favorece o original quando se priorizam probabilidade mais confiável e menos alarmes falsos; o balanceado é alternativa quando a prioridade é reduzir chuvas não detectadas.
 
-Após congelar os quatro joblibs finais, a v5 avaliou o teste retrospectivo de 2026 (6.551 linhas, 1.375 positivas; limiar fixo 0,50). O original obteve PR-AUC 0,64577, Brier 0,10904, recall 0,43345, 273 falsos positivos e 779 falsos negativos. O `balanced_subsample` obteve PR-AUC 0,64234, Brier 0,12542, recall 0,75855, 853 falsos positivos e 332 falsos negativos. O peso positivo 2:1 ficou entre eles em recall (0,61891), com PR-AUC 0,64554. A avaliação foi concluída e registrada, mas é retrospectiva: 2026 já havia sido consultado em ciclos anteriores e não participou da seleção v5.
+Após congelar os quatro joblibs finais, a v5 avaliou o teste retrospectivo de 2026 (6.551 linhas, 1.375 positivas; limiar fixo 0,50). O original obteve PR-AUC 0,64577, Brier 0,10904, sensibilidade 0,43345, 273 falsos positivos e 779 falsos negativos. O `balanced_subsample` obteve PR-AUC 0,64234, Brier 0,12542, sensibilidade 0,75855, 853 falsos positivos e 332 falsos negativos. O peso positivo 2:1 ficou entre eles em sensibilidade (0,61891), com PR-AUC 0,64554. A avaliação foi concluída e registrada, mas é retrospectiva: 2026 já havia sido consultado em ciclos anteriores e não participou da seleção v5.
 
 Assim, existe um candidato técnico preferido, mas ainda não uma decisão operacional irreversível: os custos dos erros não foram definidos, as entradas e o alvo precisam de confirmação na fonte, e 2026 já foi consultado em etapas antigas. A v5 avaliou esse período uma vez após congelar os modelos, sem usar os resultados para a seleção; portanto, a avaliação é retrospectiva e não independente.
+
+### Comparação atual `train_v6.py`
+
+Nas partições de desenvolvimento, `ensemble_original_favor` obteve a maior PR-AUC média (0,67319), praticamente empatada com a média simples (0,67315). A média simples alcançou sensibilidade de 0,75967, entre o original (0,54255) e o `balanced_subsample` (0,81075), com Brier 0,10470, pior que o original (0,08860). Como as proporções foram comparadas nas mesmas partições e os custos dos erros não foram definidos, isto é evidência exploratória, não escolha operacional.
+
+A v6 mantém sete atributos e os parâmetros estruturais `n_estimators=400`, `min_samples_leaf=10`, `max_features=sqrt` e bootstrap. Compara os pesos de classe `None`, `balanced` e `balanced_subsample`, além das combinações de probabilidades com pesos iguais e três proporções alternativas. A avaliação usa as partições cronológicas 2022–2025 e três sementes; o teste de 2026 não foi consultado nesta versão. Métricas por partição/semente, previsões fora da amostra, três joblibs, resumo e hashes estão no experimento local `data/experiments/weather_v6_20261105T120000Z/`; consulte `reports/training/sixth_training_report.md`. As combinações são evidência de desenvolvimento, não decisão operacional; custos dos erros e avaliação futura independente continuam pendentes.
+
+### Avaliação aninhada `evaluate_test.py`
+
+A v7 reutiliza previsões fora da amostra da v6. Para cada partição externa de 2023, 2024 e 2025, ajusta calibradores, pesos (grade simplex com passo 0,1) e limiar somente com anos anteriores. Compara calibração sigmoide, isotônica e sem ajuste, quatro políticas fixas e uma combinação de três modelos ajustada internamente, sob quatro cenários de custo FN:FP. Mede também complementaridade de erros. Reavaliação registrada em `data/experiments/weather_v7_reassessment_20261105T/`; não seleciona modelo operacional nem grava joblibs finais porque a equipe ainda não definiu custo/limite de alertas. 2026 não foi usado. Consulte `reports/training/seventh_training_report.md`.
+
+
+
+### Candidato preparado para futura integração
+
+A equipe optou provisoriamente pela média simples dos três membros v6: original, `balanced` e `balanced_subsample`, com calibradores isotônicos individuais e pesos 1/3. Limiar inicial 0,50; versão `weather-v6-simple-mean-isotonic-v1`. Pacote do modelo e manifesto locais: `data/experiments/weather_v6_integration_candidate_20261105T190315Z/`; empacotador `scripts/package_weather_model.py`; adaptador `src/models/weather_ensemble.py`. Os contratos de [serviço de retaguarda](docs/integration/backend.md), [interface](docs/integration/frontend.md) e [Banco](docs/integration/database.md) foram alinhados.
+
+A v6 requer quatro medidas atuais e pressão em T-1h; o serviço de retaguarda deriva `temp_humidity`, `pressure_diff` e `hour_of_day`. A pressão anterior foi adicionada à requisição e ao esquema proposto para tornar a engenharia reproduzível. Este é um candidato para integração histórica, não validação operacional independente. API, migração e tela continuam por implementar.
 
 ### Versão v4 arquivada
 
@@ -58,11 +78,11 @@ Foram corrigidos e validados os seguintes pontos na v4:
 
 A execução `weather_20261103T190835Z` concluiu treino, validação e validação cruzada; os cinco joblibs foram carregados e conferidos com sete entradas. Os hashes da tabela e dos modelos correspondem ao manifesto. O conjunto de teste de 2026 permaneceu sem avaliação nesta rodada. Ver `reports/training/fourth_training_report.md` para métricas, artefatos e ressalvas.
 
-### Comparação atual `train_v5.py`
+### Comparação histórica v5 (arquivada)
 
-A v5 compara os pesos `None`, `balanced`, `balanced_subsample` e positivo manual 2:1; folhas mínimas 5 e 10; e 250, 400 ou 800 árvores nas combinações selecionadas. Usa os sete atributos da v4, folds expansivos 2022-2025 e três sementes. O limiar é fixo em 0,50 nas métricas de classificação e o período de 2026 não participa da seleção nem do ajuste final.
+A v5 compara os pesos `None`, `balanced`, `balanced_subsample` e positivo manual 2:1; folhas mínimas 5 e 10; e 250, 400 ou 800 árvores nas combinações selecionadas. Usa os sete atributos da v4, partições expansivos 2022-2025 e três sementes. O limiar é fixo em 0,50 nas métricas de classificação e o período de 2026 não participa da seleção nem do ajuste final.
 
-O experimento contém 144 resultados de fold/semente, 1.262.160 linhas de previsão out-of-fold, quatro joblibs finais e métricas/previsões de teste para 6.551 registros de 2026. Os modelos estão ajustados somente com dados anteriores a 2026. O manifesto registra parâmetros, versões, hashes, avaliação retrospectiva concluída e a confirmação de que o teste não participou da seleção. Consulte `reports/training/fifth_training_report.md` para resultados, limitações e próximos passos.
+O experimento contém 144 resultados de partição/semente, 1.262.160 linhas de previsão fora da amostra, quatro joblibs finais e métricas/previsões de teste para 6.551 registros de 2026. Os modelos estão ajustados somente com dados anteriores a 2026. O manifesto registra parâmetros, versões, hashes, avaliação retrospectiva concluída e a confirmação de que o teste não participou da seleção. Consulte `reports/training/fifth_training_report.md` para resultados, limitações e próximos passos.
 
 ### Testes, dependências e publicação
 
@@ -75,14 +95,14 @@ As regras locais de proteção do Git, os hooks e a documentação de onboarding
 1. Aprovar com a equipe a prioridade entre alarmes falsos e chuvas não detectadas, incluindo o limiar ou taxa máxima de alertas.
 2. Confirmar a semântica temporal da precipitação, a procedência primária dos dados e a disponibilidade real das entradas.
 3. Reservar dados futuros ainda não consultados para avaliação independente depois de congelar modelo, atributos e limiar.
-4. Garantir que a engenharia das sete entradas seja reproduzida sem diferenças no futuro backend.
+4. Garantir que a engenharia das sete entradas seja reproduzida sem diferenças no futuro serviço de retaguarda.
 5. Validar a instalação em ambiente limpo e revisar o estado do Git antes de publicar.
 
 ---
 
 ## Resumo geral
 
-O projeto possui uma base de auditoria, análise exploratória, diagnóstico dos dados e investigação preliminar das imagens GOES. No eixo meteorológico, a tabela supervisionada foi preparada e utilizada em cinco execuções documentadas de treinamento; a v5 adiciona uma comparação repetida com critério explícito e artefatos conferidos, mantendo 2026 fora da seleção.
+O projeto possui uma base de auditoria, análise exploratória, diagnóstico dos dados e investigação preliminar das imagens GOES. No eixo meteorológico, a tabela supervisionada foi preparada e utilizada em seis execuções documentadas de treinamento; a v5 adiciona comparação repetida; a v6 compara três estratégias de peso; a v7 avalia calibração, combinação e limiar com validação temporal aninhada, sem consultar o teste de 2026.
 
 Os resultados continuam experimentais e retrospectivos. Permanecem incertezas sobre a origem primária dos dados, a semântica temporal da precipitação e a disponibilidade real das variáveis no instante em que uma previsão seria emitida. Portanto, ainda não demonstram capacidade de previsão operacional em tempo real.
 
@@ -98,11 +118,11 @@ A preparação para colaboração no GitHub, as regras locais de proteção de a
 - Preservação do arquivo original utilizado na preparação.
 - Separação cronológica em treino, validação e teste, com limites temporais aplicados também ao horário-alvo.
 - Implementação e execução documentada de quatro ciclos: treinamento inicial, comparação ampliada v3, execução de 31/10 e v4 corrigida em `weather_20261103T190835Z`.
-- Comparação de baseline constante, baseline por prior, regressão logística, Random Forest original e Random Forest balanceado.
+- Comparação de modelo de referência constante, modelo de referência por prior, regressão logística, Random Forest original e Random Forest balanceado.
 - Avaliação retrospectiva do teste nas duas primeiras execuções; a terceira e a quarta execuções mantiveram o teste sem avaliação.
 - Registro de métricas, previsões, manifesto e resumo da divisão temporal nos diretórios locais dos experimentos, conforme os relatórios.
 - `scripts/archive/train_v4.py` corrigido e executado historicamente; inclui três atributos derivados, seleção de limiar na validação e validação cruzada temporal. Manifesto e cinco joblibs foram conferidos; teste de 2026 não avaliado nessa execução.
-- `scripts/train_v5.py` é a versão atual de comparação; os testes da v4 foram mantidos no arquivo único `tests/test_train.py`.
+- `scripts/archive/train_v5.py` preserva o experimento histórico; a v6 é o treinamento mais recente e os testes permanecem centralizados em `tests/test_train.py`.
 - Suíte atual com 46 testes aprovados; a etapa inicial havia registrado 42 testes.
 
 ### Auditoria e exploração de dados
@@ -128,7 +148,7 @@ Essas atividades são exploratórias. Não constituem um conjunto de imagens geo
 
 - Configuração em `config.py` e `.env.example`, incluindo modo `sample`/`full`, caminhos de NPZ/ZIP, CSV e README e membro opcional.
 - `scripts/make_sample.py`: seleção determinística de um NPZ inteiro, sem extração em massa ou sobrescrita, com saída estritamente menor que 50 MB.
-- `scripts/check_dataset.py`: smoke test de uma imagem na fonte configurada. O modo `full` troca a origem configurada, mas não executa processamento integral.
+- `scripts/check_dataset.py`: teste rápido de uma imagem na fonte configurada. O modo `full` troca a origem configurada, mas não executa processamento integral.
 - `.gitignore` com negação por padrão: somente código e documentação explicitamente permitidos podem ser adicionados conforme as regras definidas.
 - Exclusão de dados NPZ/ZIP/CSV, resultados JSON/PNG, ambientes locais e credenciais.
 - `.githooks/pre-commit` e `scripts/check_staged.py` para inspecionar todo o índice, rejeitar tipos e caminhos proibidos e arquivos acima de 1 MB, inclusive NPZ adicionado à força.
@@ -145,7 +165,7 @@ config.py / .env.example
 scripts/
     Preparação meteorológica
     Treinamento e avaliação do modelo
-    Amostragem e smoke test do acervo
+    Amostragem e teste rápido do acervo
     Verificação do índice Git
 
 src/data/
@@ -225,9 +245,9 @@ Resultado histórico do Random Forest original no primeiro experimento, no teste
 | Casos de chuva não identificados | 916 |
 | Falsos positivos | 317 |
 
-Nas avaliações posteriores, a versão v3 comparou cinco modelos no mesmo período já consultado. No limiar 0,50, o Random Forest balanceado alcançou recall de 81,82% e F1 de 57,37%, mas gerou 1.422 falsos positivos. Esses resultados são retrospectivos e não independentes.
+Nas avaliações posteriores, a versão v3 comparou cinco modelos no mesmo período já consultado. No limiar 0,50, o Random Forest balanceado alcançou sensibilidade de 81,82% e F1 de 57,37%, mas gerou 1.422 falsos positivos. Esses resultados são retrospectivos e não independentes.
 
-O baseline que sempre prevê ausência de chuva obteve acurácia de 79,01%, mas não identificou nenhum caso positivo. Isso demonstra por que a acurácia, isoladamente, é insuficiente para avaliar este problema.
+O modelo de referência que sempre prevê ausência de chuva obteve acurácia de 79,01%, mas não identificou nenhum caso positivo. Isso demonstra por que a acurácia, isoladamente, é insuficiente para avaliar este problema.
 
 O teste de janeiro a setembro de 2026 já foi utilizado nas avaliações anteriores e não deve ser reutilizado para escolher parâmetros, atributos ou limiares da v4.
 
@@ -257,10 +277,10 @@ As versões de scikit-learn e joblib utilizadas no experimento correspondem às 
 
 ### Antes de publicar ou compartilhar novas alterações
 
-1. Revisar a documentação histórica para decidir se caminhos locais e detalhes do dataset devem ser públicos.
+1. Revisar a documentação histórica para decidir se caminhos locais e detalhes do conjunto de dados devem ser públicos.
 2. Validar a instalação limpa das dependências em um ambiente da equipe.
 3. Definir armazenamento externo autorizado para amostras e acervo, se necessário. Não há licença de redistribuição dos dados aprovada nem URL de download configurada.
-4. Ativar o hook em cada clone e exigir revisão por Pull Request na branch principal, conforme o fluxo acordado.
+4. Ativar o hook em cada clone e exigir revisão por solicitação de integração no ramo principal, conforme o fluxo acordado.
 5. Conferir o índice Git antes de cada commit. `.gitignore` e hooks podem ser contornados; não utilizar `git add -f` para incluir dados nem `--no-verify` para ignorar as verificações.
 
 ### Pendências científicas do MVP meteorológico
@@ -276,7 +296,7 @@ As versões de scikit-learn e joblib utilizadas no experimento correspondem às 
 1. Recuperar projeção, vetores de navegação e vínculo do recorte GOES para validar a mesma região nas duas grades.
 2. Aprovar semântica dos alvos, região, qualidade mínima e regra de disponibilidade e idade das imagens.
 3. Investigar a hipótese de que os 50 links com fim/criação até o horário de referência representem imagens disponíveis operacionalmente; isso ainda não está confirmado.
-4. Somente depois dessas validações, avaliar a construção de um dataset supervisionado multimodal e a comparação entre modelos meteorológicos com e sem GOES.
+4. Somente depois dessas validações, avaliar a construção de um conjunto de dados supervisionado multimodal e a comparação entre modelos meteorológicos com e sem GOES.
 
 A linha GOES é uma evolução futura do projeto e não constitui requisito para concluir a documentação ou a avaliação do primeiro modelo meteorológico.
 
@@ -284,7 +304,7 @@ A linha GOES é uma evolução futura do projeto e não constitui requisito para
 
 Parametrizar caminhos fixos e saídas dos scripts legados quando necessário, evitando reescrever documentação histórica sem revisão. Considerar configuração central e integração contínua quando o fluxo estiver definido.
 
-Não há API, frontend, banco de dados ou serviço operacional implementado nesta etapa. O projeto segue como pesquisa baseada em scripts.
+Não há API, interface, banco de dados ou serviço operacional implementado nesta etapa. O projeto segue como pesquisa baseada em scripts.
 
 Para detalhes científicos, consultar os relatórios em `reports/temporal/`, `reports/horizons/` e `reports/pilot/`, além de `reports/project/revisao_tabela_e_periodos.md`. Os documentos históricos anteriores continuam disponíveis em `docs/history/`.
 

@@ -1,14 +1,14 @@
-# Integração — equipe Front-End
+# Integração — equipe responsável pela interface
 
 **Versão proposta: 1 | 22/10/2026**
 
-Objetivo: uma tela simples para solicitar e visualizar previsão de chuva na próxima hora em Londrina. MVP histórico, inicialmente com resposta fictícia. API ainda a implementar; manter o formato alinhado ao [Backend](backend.md).
+Objetivo: uma tela simples para solicitar e visualizar previsão de chuva na próxima hora em Londrina. MVP histórico, inicialmente com resposta fictícia. API ainda a implementar; manter o formato alinhado ao [serviço de retaguarda](backend.md).
 
 ## Componentes mínimos da tela
 
 1. Título “Previsão de chuva — Londrina” e indicação “Simulação histórica”.
 2. Data e hora de referência T, com horas inteiras e fuso `America/Sao_Paulo` identificado.
-3. Quatro campos numéricos: temperatura (°C), umidade (%), pressão ao nível do mar (hPa) e cobertura de nuvens (%).
+3. Cinco campos numéricos: temperatura (°C), umidade (%), pressão atual ao nível do mar (hPa), cobertura de nuvens (%) e pressão ao nível do mar da hora anterior (hPa).
 4. Botão “Calcular previsão”, desabilitado enquanto a solicitação estiver em andamento.
 5. Resultado: probabilidade em porcentagem, “Chuva prevista”/“Sem chuva prevista” e início/fim do intervalo.
 6. Aviso destacado **“Demonstração — resultado fictício”** quando `is_mock=true`. Mesmo com modelo real, manter a indicação histórica quando `mode="historical"`.
@@ -18,7 +18,7 @@ Pode existir botão “Preencher exemplo”, mas seus valores devem ser identifi
 
 ## Requisição
 
-**POST /predict**, `Content-Type: application/json`. URL-base configurável, acordada com o Backend; nenhuma credencial de banco no navegador.
+**POST /predict**, `Content-Type: application/json`. URL-base configurável, acordada com o serviço de retaguarda; nenhuma credencial de banco no navegador.
 
 ```json
 {
@@ -28,16 +28,17 @@ Pode existir botão “Preencher exemplo”, mas seus valores devem ser identifi
     "temperature_2m": 24.7,
     "relative_humidity_2m": 74,
     "pressure_msl": 1008.9,
-    "cloud_cover": 97
+    "cloud_cover": 97,
+    "pressure_msl_previous_hour": 1009.4
   }
 }
 ```
 
-Enviar números JSON, não strings com unidades. Umidade/nuvens: 0–100; pressão: positiva; todos os campos obrigatórios. Não enviar `rain` futuro, `rain_predicted`, `is_mock` ou probabilidade no request: são responsabilidades do Backend.
+Enviar números JSON, não strings com unidades. `pressure_msl_previous_hour` representa T-1h e é necessário para reproduzir `pressure_diff`. Umidade/nuvens: 0–100; pressões atual/anterior: positivas; todos os campos obrigatórios. Não enviar `rain` futuro, `rain_predicted`, `is_mock` ou probabilidade na requisição: são responsabilidades do serviço de retaguarda.
 
 Converter corretamente o horário escolhido em `America/Sao_Paulo` para ISO 8601 com offset. Um campo de data/hora sem fuso não deve ser enviado diretamente nem interpretado automaticamente no fuso do computador do usuário. T é histórico, diferente da hora atual do clique.
 
-## Resposta de sucesso — HTTP 201
+## Resposta prevista quando o serviço de retaguarda usar o modelo candidato — HTTP 201. Enquanto retornar uma resposta fictícia, o serviço de retaguarda deve enviar `is_mock=true` e `model_version=null`, e a interface deve exibir o aviso de resultado fictício.
 
 ```json
 {
@@ -51,12 +52,12 @@ Converter corretamente o horário escolhido em `America/Sao_Paulo` para ISO 8601
   "rain_predicted": true,
   "decision_threshold": 0.5,
   "mode": "historical",
-  "is_mock": true,
-  "model_version": null
+  "is_mock": false,
+  "model_version": "weather-v6-simple-mean-isotonic-v1"
 }
 ```
 
-Exibir `rain_probability × 100`: neste exemplo fictício, 72%. Usar `rain_predicted` para o texto de decisão, sem inventar outro limiar na tela. Mostrar a janela “das 14h às 15h” em horário de Londrina. Um resultado positivo indica ocorrência em algum momento da janela, não chuva contínua durante toda a hora.
+Exibir `rain_probability × 100`: neste exemplo ilustrativo, 72%. Usar `rain_predicted` para o texto de decisão, sem inventar outro limiar na tela. Mostrar a janela “das 14h às 15h” em horário de Londrina. Um resultado positivo indica ocorrência em algum momento da janela, não chuva contínua durante toda a hora.
 
 Com modelo real, o formato permanece: `is_mock=false`, versão preenchida e valores calculados. Remover somente o aviso de resultado fictício; não remover a indicação histórica.
 
@@ -80,6 +81,6 @@ Ao editar entradas ou fazer nova solicitação, não deixar resultado antigo par
 
 ## Relação com o banco e aceite
 
-O Backend grava uma linha em `predictions` com entradas, resultado, horários e versão, e devolve seu UUID. O Front-End não grava diretamente no banco. Detalhes em [Banco de Dados](database.md).
+O serviço de retaguarda grava uma linha em `predictions` com entradas, resultado, horários e versão, e devolve seu UUID. A interface não grava diretamente no banco. Detalhes em [Banco de Dados](database.md).
 
-Entrega aceita quando a tela envia o exemplo, mostra resposta/aviso fictício, trata 422/503, respeita o fuso e não mistura resultados antigos com entradas novas. URL/CORS e framework visual ainda precisam ser combinados. Não há rota de histórico ou promessa de previsão em tempo real nesta versão.
+Entrega aceita quando a tela envia o exemplo, mostra resposta/aviso fictício, trata 422/503, respeita o fuso e não mistura resultados antigos com entradas novas. URL/CORS e estrutura tecnológica visual ainda precisam ser combinados. Não há rota de histórico ou promessa de previsão em tempo real nesta versão.

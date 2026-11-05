@@ -22,7 +22,7 @@ from scripts.archive.train_v4 import (
 )
 from sklearn.dummy import DummyClassifier
 from config import ROOT, WEATHER_FEATURES
-from scripts.train_v5 import (
+from scripts.archive.train_v5 import (
     FEATURES as V5_FEATURES,
     candidates as v5_candidates,
     evaluate_models_on_test as v5_evaluate_models_on_test,

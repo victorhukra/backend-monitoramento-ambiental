@@ -18,7 +18,7 @@ Enquanto as duas primeiras questões são investigadas, podemos revisar integrid
 
 ## 2. O que foi conferido diretamente
 
-Foram lidos o CSV derivado completo, seu resumo/exclusões, o CSV original, `config.py`, `scripts/prepare_weather.py` e seus testes. Também foram consultados o README do dataset, auditoria, EDA, protocolo temporal, relatório de proveniência, guia de preparação e estado atual do projeto.
+Foram lidos o CSV derivado completo, seu resumo/exclusões, o CSV original, `config.py`, `scripts/prepare_weather.py` e seus testes. Também foram consultados o README do conjunto de dados, auditoria, EDA, protocolo temporal, relatório de proveniência, guia de preparação e estado atual do projeto.
 
 | Verificação da tabela atual | Resultado |
 |---|---|
@@ -118,7 +118,7 @@ Por enquanto não houve imputação nem normalização. Se necessárias, médias
 
 Usar validação para escolher modelo e limiar; congelar essas escolhas antes de abrir as métricas do teste. Definir previamente métricas que mostrem acertos e erros de chuva, como precisão, revocação e matriz de confusão, além de comparar com sempre prever ausência de chuva. Acurácia isolada pode enganar quando predominam horas secas.
 
-**Transparência:** a EDA já examinou descritivamente todo o período, inclusive os candidatos a teste. Portanto, não alegar que ninguém viu esses dados. A partir da escolha, reservá-los de decisões baseadas em desempenho: não ajustar modelo, features, limiar ou datas conforme o resultado final. Se esse resultado motivar mudanças, será necessária outra avaliação independente para avaliar essas mudanças sem reutilizar o mesmo teste.
+**Transparência:** a EDA já examinou descritivamente todo o período, inclusive os candidatos a teste. Portanto, não alegar que ninguém viu esses dados. A partir da escolha, reservá-los de decisões baseadas em desempenho: não ajustar modelo, atributos, limiar ou datas conforme o resultado final. Se esse resultado motivar mudanças, será necessária outra avaliação independente para avaliar essas mudanças sem reutilizar o mesmo teste.
 
 ## 8. Decisões a registrar ao final da conversa
 
@@ -135,7 +135,7 @@ Após registrar essas decisões, a próxima implementação pode ser uma divisã
 
 - [Preparação do MVP](../../docs/prepare_weather.md) e [script responsável](../../scripts/prepare_weather.py).
 - [Resumo da tabela](../../data/processed/weather_training.json) e [exclusões](../../data/processed/weather_training_excluded.csv).
-- [README do dataset preservado](../../docs/dataset/README.md).
+- [README do conjunto de dados preservado](../../docs/dataset/README.md).
 - [Auditoria](../dataset_audit.md), [EDA](../eda/eda_report.md) e [protocolo anterior](../protocol/protocol_proposal.md).
 - [Proveniência e significado temporal ainda pendentes](../temporal/source_provenance_report.md).
 

@@ -2,7 +2,7 @@
 
 ## 1. Escopo e amostra
 
-Piloto de engenharia, executado em 15/10/2026. Nenhum target, dataset de modelagem, associação a previsão, elegibilidade temporal definitiva, imputação ou modelo foi criado. Fontes abertas somente para leitura. O ZIP real é `C:\Users\CANAL\Downloads\dataset_goes.zip`, confirmado no ambiente, com 79201181103 bytes. Foram usados `ZipFile.read(ZipInfo)` e `numpy.load(..., allow_pickle=False)`, sem extração em disco.
+Piloto de engenharia, executado em 15/10/2026. Nenhum alvo, conjunto de dados de modelagem, associação a previsão, elegibilidade temporal definitiva, imputação ou modelo foi criado. Fontes abertas somente para leitura. O ZIP real é `C:\Users\CANAL\Downloads\dataset_goes.zip`, confirmado no ambiente, com 79201181103 bytes. Foram usados `ZipFile.read(ZipInfo)` e `numpy.load(..., allow_pickle=False)`, sem extração em disco.
 
 Seleção: **até 12 links únicos de janeiro/2023**, ordenados por time/nome e escolhidos em posições equiespaçadas por linspace inteiro entre primeiro e último. Nenhuma amostragem aleatória/seed é necessária. Janeiro contém 744 linhas com link e 744 links únicos; não foram lidas as 744 imagens do mês. Acrescentados os quatro casos totalmente inválidos já identificados na EDA, dois casos de maior intervalo de reuso (desempate por nome), e o primeiro exemplo válido de cada assinatura da EDA. Nomes são deduplicados antes da leitura.
 
@@ -10,17 +10,17 @@ Resultado: **19 imagens únicas selecionadas**. `sample_manifest.json` registra 
 
 ## 2. Implementação e reuso
 
-`src/features/goes.py` separa leitura seletiva, diagnóstico de identidade e reconstrução física. Reutiliza `scalar` e `stats` de `src/data/audit.py`; `stats` é usado nos testes artificiais, não para gerar features regionais reais. Reutiliza-se também `fingerprint` no executor `src/features/pilot.py`. Os módulos anteriores não foram modificados.
+`src/features/goes.py` separa leitura seletiva, diagnóstico de identidade e reconstrução física. Reutiliza `scalar` e `stats` de `src/data/audit.py`; `stats` é usado nos testes artificiais, não para gerar atributos regionais reais. Reutiliza-se também `fingerprint` no executor `src/features/pilot.py`. Os módulos anteriores não foram modificados.
 
-A função histórica `inspect_npz` faz estatísticas da imagem inteira e falha para matriz totalmente inválida. Por isso não foi utilizada como extrator deste estágio: o novo contrato retorna estados explícitos e não emite cinco features para o domínio inteiro. `reconstructed` significa apenas que a leitura/transformação física funcionou; não certifica geolocalização, QA radiométrico completo ou disponibilidade temporal.
+A função histórica `inspect_npz` faz estatísticas da imagem inteira e falha para matriz totalmente inválida. Por isso não foi utilizada como extrator deste estágio: o novo contrato retorna estados explícitos e não emite cinco atributos para o domínio inteiro. `reconstructed` significa apenas que a leitura/transformação física funcionou; não certifica geolocalização, QA radiométrico completo ou disponibilidade temporal.
 
 Limites: 30 imagens únicas no piloto, 32 MiB por membro externo e 128 MiB de expansão interna do NPZ. Uma imagem por vez; arrays liberados ao final da inspeção. Nenhum PNG/JPEG criado. Dependências efetivamente usadas: numpy/pandas e biblioteca padrão; nenhuma instalação nova.
 
 ## 3. Metadados e reconstrução física
 
-Inspecionados `satellite`, `grid_signature`, `timestamp_utc`, `source_filename`, `source_key`, `units`, `scale_factor`, `add_offset` e `fill_value`. Chaves, shape/dtype e diagnósticos individuais estão em `image_diagnostics.json`. A tabela resumida está em `image_diagnostics.csv`.
+Inspecionados `satellite`, `grid_signature`, `timestamp_utc`, `source_filename`, `source_key`, `units`, `scale_factor`, `add_offset` e `fill_value`. Chaves, formato/dtype e diagnósticos individuais estão em `image_diagnostics.json`. A tabela resumida está em `image_diagnostics.csv`.
 
-| Satélite | Assinatura | Shape | Dtype | Imagens |
+| Satélite | Assinatura | Formato | Dtype | Imagens |
 |---|---|---|---|---|
 | GOES-19 | 4d1d681125ac7ad72c9085784ca9d701e44201dd836f5e105230f2542880a4a8 | [882, 1217] | int16 | 3 |
 | GOES-16 | 44738571aeb9849026fae60a7e0cca4369474a4f1097b01a4e2726ccca746876 | [885, 1217] | int16 | 16 |
@@ -31,9 +31,9 @@ O preenchimento é obtido de cada arquivo, não fixado em −1. Para inteiros, u
 
 Escala e offset devem ser escalares numéricos finitos. Este leitor C13 aceita escala positiva e unidade K/Kelvin; outras unidades ficam como não suportadas, sem valores inventados. Metadados físicos ausentes impedem reconstrução. Falhas de identidade são registradas separadamente e impedem considerar o arquivo plenamente validado, mesmo que sua transformação numérica seja possível. Timestamps sem offset são sinalizados sem assumir fuso.
 
-Resultado por estado: `{'reconstructed': 15, 'all_invalid': 4}`. Nos arquivos reconstruídos, a faixa global dos **diagnósticos de leitura da matriz inteira**, em Kelvin, foi 181.73852955549955 a 331.07009736448526 K. Esses extremos não são estatísticas de Londrina, não são features e não demonstram qualidade de todos os pixels. Não houve conversão para Celsius ou confusão com temperatura do ar a 2 m.
+Resultado por estado: `{'reconstructed': 15, 'all_invalid': 4}`. Nos arquivos reconstruídos, a faixa global dos **diagnósticos de leitura da matriz inteira**, em Kelvin, foi 181.73852955549955 a 331.07009736448526 K. Esses extremos não são estatísticas de Londrina, não são atributos e não demonstram qualidade de todos os pixels. Não houve conversão para Celsius ou confusão com temperatura do ar a 2 m.
 
-| ID | Timestamp do NPZ | Satélite | Shape | Estado físico | Válidos | Inválidos | Mínimo diagnóstico K | Máximo diagnóstico K |
+| ID | Timestamp do NPZ | Satélite | Formato | Estado físico | Válidos | Inválidos | Mínimo diagnóstico K | Máximo diagnóstico K |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 2020-01-01T00:00:21+00:00 | GOES-16 | [885, 1217] | reconstructed | 1077045 | 0 | 190.15763440728188 | 300.8965172022581 |
 | 2 | 2020-06-04T12:40:17+00:00 | GOES-16 | [885, 1217] | all_invalid | 0 | 1077045 | — | — |
@@ -61,7 +61,7 @@ Resultado por estado: `{'reconstructed': 15, 'all_invalid': 4}`. Nos arquivos re
 
 O README original, §8 “Informações da projeção”, fornece longitude central −75°, altura 35.786.023 m, sweep x e limites distintos de cada assinatura:
 
-| Grade | Shape | x_min / x_max (m conforme exemplo) | y_min / y_max (m conforme exemplo) |
+| Grade | Formato | x_min / x_max (m conforme exemplo) | y_min / y_max (m conforme exemplo) |
 |---|---|---|---|
 | 44738571… | 885×1217 | 710424,5721944869 / 3147309,4861819297 | −3299614,6266644895 / −1528063,4525660723 |
 | 4d1d6811… | 882×1217 | 712428,538085401 / 3149313,452072844 | −3283582,3662838787 / −1518043,6231115013 |
@@ -78,9 +78,9 @@ Entre as reconstruções, **14 matrizes têm todos os pixels válidos segundo fi
 
 - `dataset_goes/samples/2024/09/09/OR_ABI-L2-MCMIPF-M6_G16_s20242530030204_e20242530039512_c20242530045310.npz`: 17346 pixels válidos e 1059699 inválidos; fração válida 1.6105%.
 
-O caso parcial de setembro/2024 já está no JSON detalhado da EDA, com a mesma contagem de inválidos, e foi confirmado pelo piloto. A generalização no texto da EDA de que os demais arquivos tinham zero pixels inválidos não corresponde a esse registro detalhado. O relatório anterior foi preservado; esta ressalva corrige sua interpretação. Nenhum limiar mínimo de cobertura foi escolhido: reconstrução bem-sucedida não implica imagem elegível para features.
+O caso parcial de setembro/2024 já está no JSON detalhado da EDA, com a mesma contagem de inválidos, e foi confirmado pelo piloto. A generalização no texto da EDA de que os demais arquivos tinham zero pixels inválidos não corresponde a esse registro detalhado. O relatório anterior foi preservado; esta ressalva corrige sua interpretação. Nenhum limiar mínimo de cobertura foi escolhido: reconstrução bem-sucedida não implica imagem elegível para atributos.
 
-**As cinco features regionais não foram extraídas**, porque a condição de validação espacial do pedido não foi atendida. `region_statistics` permanece null e `spatial_status` é `not_validated`. As contagens e frações registradas referem-se exclusivamente à matriz lida, como diagnóstico de máscara. Não foram apresentadas como qualidade de uma região de Londrina.
+**As cinco atributos regionais não foram extraídas**, porque a condição de validação espacial do pedido não foi atendida. `region_statistics` permanece null e `spatial_status` é `not_validated`. As contagens e frações registradas referem-se exclusivamente à matriz lida, como diagnóstico de máscara. Não foram apresentadas como qualidade de uma região de Londrina.
 
 Média, desvio padrão populacional, mínimo, máximo e mediana foram verificados somente em pequenas matrizes artificiais de valores físicos com máscara conhecida, reutilizando a função `stats`. Isso testa a aritmética sem fabricar uma máscara geográfica. Em matriz totalmente inválida: estado `all_invalid`, nenhuma matriz física retornada, extremos físicos ausentes, nenhuma substituição por zeros. Casos de metadados físicos inválidos são distintos de ausência de pixels válidos.
 
@@ -88,9 +88,9 @@ Média, desvio padrão populacional, mínimo, máximo e mediana foram verificado
 
 Os casos totalmente inválidos da EDA foram incluídos deliberadamente. Metadados ausentes ou identidade incompatível não tinham exemplos reais identificados disponíveis; os testes sintéticos não são evidências de que esses problemas ocorram no acervo. Um fill diferente do esperado ou campo ausente nunca aciona preenchimento silencioso.
 
-Shapes distintos são suportados como matrizes numéricas; a compatibilidade entre assinatura e shape é conferida com o mapa do README apenas como diagnóstico, não validação geográfica. Unidade e escala compartilhadas não provam equivalência espacial ou calibração entre sensores.
+Formatos distintos são suportados como matrizes numéricas; a compatibilidade entre assinatura e formato é conferida com o mapa do README apenas como diagnóstico, não validação geográfica. Unidade e escala compartilhadas não provam equivalência espacial ou calibração entre sensores.
 
-O piloto registra referências do CSV e timestamps do NPZ sem estabelecer emissão, target, tolerância temporal, nova associação ou elegibilidade definitiva. Não transforma as capturas futuras em entradas autorizadas. Permanecem pendentes a semântica do CSV e logs históricos de disponibilidade. Não é um pipeline operacional em tempo real.
+O piloto registra referências do CSV e timestamps do NPZ sem estabelecer emissão, alvo, tolerância temporal, nova associação ou elegibilidade definitiva. Não transforma as capturas futuras em entradas autorizadas. Permanecem pendentes a semântica do CSV e logs históricos de disponibilidade. Não é um fluxo operacional em tempo real.
 
 ## 7. Testes e reprodutibilidade
 
@@ -116,7 +116,7 @@ test_all_invalid_is_not_zero (test_goes_pilot.PhysicalTests.test_all_invalid_is_
 test_bad_matrix (test_goes_pilot.PhysicalTests.test_bad_matrix) ... ok
 test_five_statistics_on_known_synthetic_region (test_goes_pilot.PhysicalTests.test_five_statistics_on_known_synthetic_region) ... ok
 test_inconsistent_physical_metadata (test_goes_pilot.PhysicalTests.test_inconsistent_physical_metadata) ... ok
-test_kelvin_bytes_and_different_shapes (test_goes_pilot.PhysicalTests.test_kelvin_bytes_and_different_shapes) ... ok
+test_kelvin_bytes_and_different_formatos (test_goes_pilot.PhysicalTests.test_kelvin_bytes_and_different_formatos) ... ok
 test_mask_applied_before_multiplication (test_goes_pilot.PhysicalTests.test_mask_applied_before_multiplication) ... ok
 test_missing_physical_metadata (test_goes_pilot.PhysicalTests.test_missing_physical_metadata) ... ok
 test_nonfinite_union_not_double_counted (test_goes_pilot.PhysicalTests.test_nonfinite_union_not_double_counted) ... ok
@@ -140,6 +140,6 @@ Fontes e evidências de entrada inalteradas na verificação antes/depois: **Tru
 
 **Concluído:** seleção pequena reproduzível, leitura NPZ, inspeção de metadados, reconstrução em Kelvin, máscara de fill/não finitos, estados de falha e testes independentes do acervo.
 
-**Limitação confirmada neste piloto:** metadados geográficos insuficientes para validar a região fixa sem hipóteses adicionais. Portanto, a etapa condicional de features regionais não foi executada. Obter a correspondência de geolocalização por assinatura e definir a região antes de ampliar o processamento. Não avançar para dataset de treinamento, target ou modelo. O protocolo temporal continua sujeito à confirmação.
+**Limitação confirmada neste piloto:** metadados geográficos insuficientes para validar a região fixa sem hipóteses adicionais. Portanto, a etapa condicional de atributos regionais não foi executada. Obter a correspondência de geolocalização por assinatura e definir a região antes de ampliar o processamento. Não avançar para conjunto de dados de treinamento, alvo ou modelo. O protocolo temporal continua sujeito à confirmação.
 
 Fontes: `reports/dataset_audit.md`; `reports/eda/eda_report.md`, §§7–10; `reports/eda/goes_sample_details.json`; `reports/eda/image_reuse.csv`; `reports/protocol/protocol_proposal.md`, §§3, 7 e 9; README original, §§4, 5 e 8. Os caminhos absolutos e fingerprints usados nesta execução constam de `run_manifest.json`.

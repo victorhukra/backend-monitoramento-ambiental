@@ -20,7 +20,7 @@ Os módulos `audit.py`, `eda.py` e `horizon_feasibility.py` leem o CSV já exist
 
 ## Classificação das conclusões
 
-Categorias: **C1** confirmada pelo código ou dados originais; **C2** confirmada pela documentação específica da fonte/dataset, sem comprovar execução; **C3** compatível com a documentação, não confirmada para este CSV; **C4** desconhecida.
+Categorias: **C1** confirmada pelo código ou dados originais; **C2** confirmada pela documentação específica da fonte/conjunto de dados, sem comprovar execução; **C3** compatível com a documentação, não confirmada para este CSV; **C4** desconhecida.
 
 | Questão | Categoria | Evidência e limite |
 |---|---|---|
@@ -57,7 +57,7 @@ Solicitar ao produtor **uma requisição original completa, sua resposta bruta e
 
 Rastrear um trecho com transição seco→chuva→seco e uma virada de dia: timestamp da resposta → conversão de fuso → eventuais shifts/resample/joins → linha exportada. Comparar valores e suporte temporal sem corrigir dados automaticamente. Uma amostra valida somente o caminho de transformação coberto; confirmar que o mesmo código/configuração gerou o restante ou documentar versões distintas. Recuperar somente uma nova resposta atual não demonstra que ela foi a origem histórica nem exclui revisões.
 
-Separar dois impedimentos: a semântica do intervalo impede construir **alvos definitivos**; falta de disponibilidade das entradas impede alegar **avaliação operacional**, mesmo depois de resolver os alvos. Geolocalização bloqueia as features GOES regionais, não a definição matemática isolada do alvo meteorológico.
+Separar dois impedimentos: a semântica do intervalo impede construir **alvos definitivos**; falta de disponibilidade das entradas impede alegar **avaliação operacional**, mesmo depois de resolver os alvos. Geolocalização bloqueia os atributos GOES regionais, não a definição matemática isolada do alvo meteorológico.
 
 ## Preservação e reprodução
 

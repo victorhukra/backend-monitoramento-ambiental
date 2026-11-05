@@ -10,7 +10,7 @@ O primeiro treinamento estabelece uma referência inicial para classificar se ha
 O alvo é rain_next_hour:
 - 0: não houve chuva no período-alvo;
 - 1: houve chuva no período-alvo.
-O código treina dois classificadores: um baseline constante que sempre prevê ausência de chuva e um RandomForestClassifier. O limiar de decisão usado nas métricas de classificação é o padrão do modelo, equivalente a 0,5 para a probabilidade da classe positiva.
+O código treina dois classificadores: um modelo de referência constante que sempre prevê ausência de chuva e um RandomForestClassifier. O limiar de decisão usado nas métricas de classificação é o padrão do modelo, equivalente a 0,5 para a probabilidade da classe positiva.
 
 Este é um experimento retrospectivo. Ele não implementa uma API, banco de dados, interface ou serviço de previsão em tempo real. Imagens GOES não fazem parte deste fluxo e não são pré-requisito.
 2. Dados utilizados
@@ -49,8 +49,8 @@ Excluídas nas fronteiras	Alvo atravessaria a fronteira temporal	2
 
 As duas linhas de fronteira são excluídas para evitar que o alvo de uma observação do período anterior atravesse para o período seguinte. O teste cobre janeiro a setembro de 2026, não o ano completo.
 4. Modelos e configuração
-Baseline
-DummyClassifier(strategy='constant', constant=0): prevê ausência de chuva em todas as observações. Serve como referência simples, mas não é útil para detectar chuva, pois seu recall da classe positiva é zero.
+modelo de referência
+DummyClassifier(strategy='constant', constant=0): prevê ausência de chuva em todas as observações. Serve como referência simples, mas não é útil para detectar chuva, pois sua sensibilidade da classe positiva é zero.
 Random Forest
 O modelo principal utiliza os seguintes parâmetros:
 Parâmetro	Valor
@@ -64,22 +64,22 @@ class_weight	None
 
 O modelo é ajustado apenas no conjunto de treino. A validação é usada para comparação e o teste é avaliado separadamente, mediante solicitação explícita ao script (--evaluate-test).
 5. Resultados na validação — 2025
-Métrica	Baseline sempre seco	Random Forest
+Métrica	modelo de referência sempre seco	Random Forest
 Acurácia	84,67%	85,42%
 Precisão da chuva	0,00%	53,53%
-Recall da chuva	0,00%	37,23%
+sensibilidade da chuva	0,00%	37,23%
 F1 da chuva	0,00%	43,92%
 Chuvas observadas	1.343	1.343
 Previsões positivas	0	934
 
 
-O Random Forest supera o baseline em acurácia e detecta parte das ocorrências positivas, mas deixa passar a maior parte dos eventos de chuva. Como a classe sem chuva é majoritária, a acurácia sozinha não é suficiente para avaliar o valor do modelo.
+O Random Forest supera o modelo de referência em acurácia e detecta parte das ocorrências positivas, mas deixa passar a maior parte dos eventos de chuva. Como a classe sem chuva é majoritária, a acurácia sozinha não é suficiente para avaliar o valor do modelo.
 6. Resultados no teste — janeiro a setembro de 2026
 O README_first_training.md registra que o conjunto de teste foi avaliado na execução original.
-Métrica	Baseline sempre seco	Random Forest
+Métrica	modelo de referência sempre seco	Random Forest
 Acurácia	79,01%	81,18%
 Precisão da chuva	0,00%	59,15%
-Recall da chuva	0,00%	33,38%
+sensibilidade da chuva	0,00%	33,38%
 F1 da chuva	0,00%	42,68%
 Chuvas observadas	1.375	1.375
 Previsões positivas	0	776
@@ -91,13 +91,13 @@ Sem chuva real	4.859	317
 Chuva real	916	459
 
 
-O modelo detectou 459 ocorrências de chuva, deixou passar 916 e gerou 317 alarmes falsos. O recall de 33,38% indica que aproximadamente dois terços dos casos positivos não foram identificados.
+O modelo detectou 459 ocorrências de chuva, deixou passar 916 e gerou 317 alarmes falsos. A sensibilidade de 33,38% indica que aproximadamente dois terços dos casos positivos não foram identificados.
 
 Cuidado com o teste: esse período já foi usado para avaliação. Não deve orientar novas escolhas de modelo ou limiar; se os resultados do teste forem usados para desenvolver uma nova versão, será necessário obter uma avaliação independente.
 7. Artefatos registrados
 A execução documentada está em data/experiments/weather_20261027T173216Z/.
 Arquivo	Finalidade
-baseline.joblib	Classificador que sempre prevê ausência de chuva
+modelo de referência.joblib	Classificador que sempre prevê ausência de chuva
 random_forest.joblib	Random Forest treinado
 manifest.json	Versões, parâmetros e informações do experimento
 split_summary.json	Contagens e regras da separação temporal
@@ -118,15 +118,15 @@ Pontos positivos observados no código:
 - mantém a avaliação do teste opcional, em vez de executá-la automaticamente;
 - impede que a pasta de saída sobrescreva um experimento existente e exige que fique dentro de data/experiments.
 Limitações e pontos de atenção:
-- as métricas principais dependem do limiar padrão de 0,5 e não exploram outros compromissos entre precisão e recall;
+- as métricas principais dependem do limiar padrão de 0,5 e não exploram outros compromissos entre precisão e sensibilidade;
 - o relatório original não inclui métricas probabilísticas como PR-AUC, ROC-AUC, Brier score ou log loss;
-- o baseline constante é útil como referência, mas não como detector de chuva;
+- o modelo de referência constante é útil como referência, mas não como detector de chuva;
 - a qualidade retrospectiva não comprova que as entradas estavam disponíveis no instante real da previsão;
 - a definição temporal de rain continua sendo uma hipótese que precisa de confirmação externa;
 - a avaliação do teste já realizada significa que esse período não deve ser tratado como completamente intocado para decisões futuras.
 9. Conclusão
-O primeiro treinamento concluiu o fluxo técnico inicial: validação dos dados, divisão cronológica, treinamento de um baseline e de um Random Forest, registro de métricas e salvamento dos artefatos. Na validação e no teste documentados, o Random Forest superou o baseline em acurácia e identificou parte dos eventos de chuva.
+O primeiro treinamento concluiu o fluxo técnico inicial: validação dos dados, divisão cronológica, treinamento de um modelo de referência e de um Random Forest, registro de métricas e salvamento dos artefatos. Na validação e no teste documentados, o Random Forest superou o modelo de referência em acurácia e identificou parte dos eventos de chuva.
 
-O desempenho ainda não sustenta afirmar que o modelo está pronto para uso operacional. O recall no teste foi de 33,38%, e permanecem pendentes a confirmação da semântica temporal da precipitação, a comprovação da disponibilidade das entradas em tempo real e a definição de critérios mínimos de desempenho.
+O desempenho ainda não sustenta afirmar que o modelo está pronto para uso operacional. A sensibilidade no teste foi de 33,38%, e permanecem pendentes a confirmação da semântica temporal da precipitação, a comprovação da disponibilidade das entradas em tempo real e a definição de critérios mínimos de desempenho.
 
 O segundo treinamento amplia a análise com modelos adicionais, métricas probabilísticas, validação cruzada temporal e estudo de limiares; seus resultados são documentados separadamente em second_training_report.md.

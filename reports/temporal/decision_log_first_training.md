@@ -33,7 +33,7 @@ Dois registros de fronteira foram excluídos para evitar que o horário-alvo ult
 ## 4. Modelos
 
 Foram treinados:
-- Baseline constante, que sempre prevê ausência de chuva.
+- modelo de referência constante, que sempre prevê ausência de chuva.
 - Random Forest com 100 árvores, profundidade máxima 8, mínimo de 10 amostras por folha e `random_state=42`.
 
 O limiar de classificação utilizado é 0,5.
@@ -43,10 +43,10 @@ O limiar de classificação utilizado é 0,5.
 A validação contém 8.759 registros. O Random Forest obteve:
 - Acurácia: aproximadamente 85,42%.
 - Precisão da classe de chuva: aproximadamente 53,53%.
-- Recall da classe de chuva: aproximadamente 37,23%.
+- sensibilidade da classe de chuva: aproximadamente 37,23%.
 - F1 da classe de chuva: aproximadamente 43,92%.
 
-O baseline obteve acurácia de aproximadamente 84,67%, mas não identificou ocorrências de chuva.
+O modelo de referência obteve acurácia de aproximadamente 84,67%, mas não identificou ocorrências de chuva.
 
 Esses resultados são retrospectivos e não demonstram, por si só, capacidade de previsão operacional.
 
