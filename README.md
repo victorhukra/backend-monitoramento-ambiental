@@ -8,7 +8,7 @@ Nosso objetivo é construir um MVP que receba dados meteorológicos e estime **s
 - Tabela experimental preparada: **59.159 registros**, com temperatura, umidade, pressão e nebulosidade como entradas.
 - Seis ciclos de treinamento documentados. A v6 compara três Random Forests e combinações; a avaliação v7 usa protocolo temporal aninhado para calibrar probabilidades, ajustar pesos e limiares.
 - O período de 2026 ficou fora da seleção v5. Ele já havia sido consultado em ciclos anteriores e não representa uma avaliação independente.
-- Candidato de integração preparado: média simples dos três Random Forests v6, calibradores isotônicos, limiar provisório 0,50 e pacote do modelo e manifesto locais. Contratos da interface, da retaguarda e do banco atualizados; API, banco e tela ainda não estão implementados.
+- Versão v6 definida para esta integração: média simples dos três Random Forests v6, calibradores isotônicos, limiar inicial 0,50 e pacote do modelo e manifesto locais. Contratos da interface, da retaguarda e do banco atualizados; API, banco e tela ainda não estão implementados.
 
 O Random Forest balanceado identifica mais eventos de chuva e também gera mais alarmes falsos. Ainda não há modelo escolhido para operação nem serviço de previsão em tempo real. As imagens GOES ficam para uma evolução futura; você não precisa baixar o acervo para trabalhar no MVP meteorológico atual.
 
@@ -139,14 +139,14 @@ Na revisão de 04/11/2026, a suíte completa passou em **51 testes**; `pip check
 | `scripts/archive/train_v5.py` | Comparação temporal repetida e registro de artefatos |
 | `scripts/archive/` | Versões históricas dos scripts de treinamento |
 | `tests/` | Verificações do código |
-| `docs/integration/` | Contratos para serviço de retaguarda, interface e Banco |
+| `reports/project/` | Contratos para serviço de retaguarda, interface e Banco |
 | `reports/project/` | Propostas e guia para as próximas decisões |
 | `reports/training/` | Relatórios dos ciclos experimentais |
 | `src/data/` | Auditoria, análise exploratória e investigação da origem |
 | `src/features/` | Investigação e piloto GOES |
 | `data/` | Dados e resultados locais, ignorados pelo Git |
 
-Para alinhar as equipes: [serviço de retaguarda](docs/integration/backend.md), [interface](docs/integration/frontend.md) e [Banco de Dados](docs/integration/database.md). Esses documentos são contratos propostos; não significam que os serviços já estejam implementados. A tabela `predictions` proposta para o banco guarda previsões da API e é diferente da tabela de treinamento.
+Para alinhar as equipes: [serviço de retaguarda](reports/project/alinhamento_tres_equipes_integracao.md), [interface](reports/project/demandas_frontend_busca_e_previsao.md) e [Banco de Dados](reports/project/demandas_banco_busca_e_previsao.md). Esses documentos são contratos propostos; não significam que os serviços já estejam implementados. A tabela `predictions` proposta para o banco guarda previsões da API e é diferente da tabela de treinamento.
 
 ## Colaborar sem misturar as tarefas
 

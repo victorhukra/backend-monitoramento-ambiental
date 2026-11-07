@@ -51,7 +51,7 @@ Todos os caminhos relativos deste guia partem da raiz do repositório.
 | `data/processed/weather_training.csv` | Tabela preparada, local e ignorada pelo Git. |
 | `data/processed/weather_training.json` | Metadados da preparação, incluindo informações de proveniência e hipótese temporal. |
 | `data/experiments/weather_20261027T173216Z/` | Artefatos de treinamento, validação e teste. |
-| `docs/integration/` | Contratos propostos para a aplicação; não representam uma API já implementada. |
+| `reports/project/` | Contratos propostos para a aplicação; não representam uma API já implementada. |
 | `src/data/` e relatórios de EDA/auditoria | Materiais anteriores de investigação. Não precisam ser executados novamente para reproduzir as métricas já registradas. |
 | `src/features/goes.py`, `pilot.py` e ferramentas de amostras GOES | Fora do fluxo atual de treinamento tabular. |
 
@@ -108,7 +108,7 @@ Não se deve acrescentar um atraso arbitrário e tratá-lo como prova de disponi
 
 ### 3.3. Integração com a aplicação
 
-Não foi encontrada uma implementação de API em `src`, `scripts` ou nos arquivos de entrada usuais do projeto. Os documentos em `docs/integration/` descrevem contratos propostos.
+Não foi encontrada uma implementação de API em `src`, `scripts` ou nos arquivos de entrada usuais do projeto. Os documentos em `reports/project/` descrevem contratos propostos.
 
 A existência dos modelos treinados não significa que exista um endpoint de previsão. A integração, a fonte de dados em tempo real, o banco e a interface continuam fora do escopo desta entrega.
 
@@ -347,7 +347,7 @@ Esses itens de integração não impedem reconhecer a conclusão do experimento 
 - [Relatório de proveniência e semântica temporal](../reports/temporal/source_provenance_report.md).
 - [Revisão da tabela e dos períodos](../reports/project/revisao_tabela_e_periodos.md).
 - [Proposta anterior de protocolo](../reports/protocol/protocol_proposal.md).
-- [Contrato proposto para o serviço de retaguarda](integration/backend.md).
+- [Contrato proposto para o serviço de retaguarda](../reports/project/alinhamento_tres_equipes_integracao.md).
 
 Este guia registra o estado verificado em 27/10/2026. Os resultados são de um experimento retrospectivo com dados históricos e não comprovam disponibilidade operacional das entradas, nem desempenho em produção.
 
