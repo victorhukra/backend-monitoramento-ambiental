@@ -1,12 +1,12 @@
 # Previsão de chuva em curto prazo — Londrina/PR
 
-Pipeline em Python que prepara dados meteorológicos horários, treina e avalia um ensemble de Random Forests e gera um pacote de modelo para inferência. O CSV é fornecido separadamente; imagens GOES não são necessárias para o pipeline atual.
+Este repositório prepara dados meteorológicos horários, treina e avalia modelos de classificação e disponibiliza o código do ensemble para estimar chuva na próxima hora.
 
-## Executar do zero
+## Executar o pipeline
 
-### 1. Clonar e instalar
+Requisitos: Git, Python 3.13+ e o CSV meteorológico, fornecido separadamente.
 
-Requer Git e Python 3.13 ou superior. Para reproduzir o ambiente registrado, use Python 3.13.3.
+### 1. Instalar
 
 **Windows (PowerShell):**
 
@@ -30,81 +30,76 @@ python -m pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### 2. Informar onde está o CSV
+### 2. Configurar o CSV
 
-O CSV meteorológico é fornecido por outros meios e pode ficar em qualquer diretório. Edite `.env` e substitua o caminho de exemplo:
+Edite `.env` e informe o caminho local do CSV recebido:
 
 ```dotenv
 WEATHER_CSV_PATH=/caminho/para/dataset_weather.csv
 WEATHER_TRAINING_PATH=data/processed/weather_training.csv
 ```
 
-No Windows, por exemplo, `WEATHER_CSV_PATH=C:/dados/dataset_weather.csv`. O arquivo precisa conter `time`, `temperature_2m`, `relative_humidity_2m`, `pressure_msl`, `cloud_cover` e `rain`. Não é necessário baixar dados GOES.
+No Windows, use, por exemplo, `C:/dados/dataset_weather.csv`. O CSV deve conter `time`, `temperature_2m`, `relative_humidity_2m`, `pressure_msl`, `cloud_cover` e `rain`. Não é necessário baixar imagens GOES para este pipeline.
 
-### 3. Preparar os dados
+### 3. Preparar os dados e treinar
 
-Execute a partir da raiz do repositório:
-
-```bash
-python scripts/prepare_weather.py --plot
-```
-
-O script valida timestamps e valores, associa cada registro ao horário exato T+1h e cria `data/processed/weather_training.csv` com o alvo `rain_next_hour`. Também grava um resumo, as exclusões e uma prévia. Não sobrescreve saídas existentes; para outra execução, use `--output data/processed/weather_training_v2.csv` e informe esse mesmo arquivo nos próximos passos.
-
-### 4. Treinar e gerar o ensemble
-
-Use nomes de saída novos se executar novamente:
+Execute a partir da raiz do repositório, com o ambiente virtual ativado:
 
 ```bash
-python scripts/train_v6.py --input data/processed/weather_training.csv --output-dir data/experiments/weather_v6_local
-python scripts/package_weather_model.py --v6-dir data/experiments/weather_v6_local --output-dir data/experiments/weather_v6_ensemble_local
+python scripts/prepare_weather.py
+python scripts/train_v6.py
 ```
 
-O treinamento faz validação temporal em 2022–2025, produz previsões fora da amostra e ajusta três modelos finais com dados anteriores a 2026. Pode levar vários minutos. O empacotador ajusta calibradores isotônicos a partir das previsões OOF e verifica os hashes e as features.
+A preparação valida timestamps e valores meteorológicos, associa cada hora ao registro exato de T+1h e cria `data/processed/weather_training.csv` com o alvo `rain_next_hour`.
 
-O resultado fica em `data/experiments/weather_v6_ensemble_local/`, incluindo `weather_ensemble.joblib` e `manifest.json`. Os diretórios `data/` e os artefatos são locais e ignorados pelo Git; portanto, não aparecem em um clone novo.
+O treinamento v6 executa validação temporal expansiva para os anos de 2022 a 2025, compara três variantes de Random Forest com três sementes e gera métricas, previsões fora da amostra (OOF), modelos `.joblib`, manifesto e relatório em `reports/training/`. Os artefatos do experimento são gravados em um diretório com timestamp dentro de `data/experiments/`.
 
-### 5. Verificar a instalação e testar inferência
-
-Os testes usam dados sintéticos e não precisam do CSV:
+### 4. Testes
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Para testar o bundle, execute na raiz do projeto:
+Os testes usam dados sintéticos e não dependem do CSV externo.
 
-```bash
-python -c "import joblib; b=joblib.load('data/experiments/weather_v6_ensemble_local/weather_ensemble.joblib'); w={'temperature_2m':22.5,'relative_humidity_2m':80.0,'pressure_msl':1012.0,'cloud_cover':60.0,'pressure_msl_previous_hour':1010.0}; print(b.predict_one(w,'2025-06-01T15:00:00-03:00'))"
-```
+> A avaliação v7 (`scripts/evaluate_test.py`) é uma etapa opcional de análise de calibração, pesos e limiares. O empacotamento para integração é feito por `scripts/package_weather_model.py`.
 
-A previsão recebe quatro medidas em T, a pressão em T-1h e um horário com fuso. Retorna probabilidade, decisão, limiar e versão do modelo.
+## Como funciona o treinamento
 
-## Sobre o modelo
+O alvo é `rain_next_hour`: 1 quando a chuva registrada em T+1h é positiva, 0 quando não é. A preparação faz o pareamento pelo horário exato, não pela linha seguinte do arquivo. O código assume que a chuva registrada em cada timestamp representa a hora anterior; essa interpretação ainda precisa ser confirmada na fonte.
 
-As sete features são temperatura, umidade, pressão, cobertura de nuvens, produto temperatura×umidade, variação da pressão e hora local. Os três Random Forests são `original`, `balanced` e `balanced_subsample`, cada um com 400 árvores e folha mínima de 10. Suas probabilidades são calibradas individualmente por regressão isotônica e combinadas por média simples; o limiar do pacote é provisoriamente 0,50.
+O modelo usa sete atributos:
 
-`rain_next_hour` vale 1 quando a chuva registrada em T+1h é positiva. Essa definição pressupõe que `rain` em um timestamp represente a precipitação acumulada na hora anterior; essa semântica ainda precisa ser confirmada na fonte.
+- quatro medidas em T: temperatura, umidade relativa, pressão ao nível do mar e cobertura de nuvens;
+- `temp_humidity`: temperatura multiplicada pela umidade;
+- `pressure_diff`: pressão em T menos pressão em T-1h;
+- `hour_of_day`: hora local em `America/Sao_Paulo`.
 
-A avaliação v7 é opcional e compara calibração, combinações e limiares com diferentes custos de falsos positivos e falsos negativos:
+A v6 compara três Random Forests com 400 árvores e folha mínima de 10:
 
-```bash
-python scripts/evaluate_test.py --input data/experiments/weather_v6_local/predictions_oof.csv --output-dir data/experiments/weather_v7_local
-```
+- `original`: sem pesos de classe;
+- `balanced`: pesos inversos à frequência das classes;
+- `balanced_subsample`: pesos recalculados em cada amostra bootstrap.
 
-## Estrutura principal
+Os folds são cronológicos: cada ano de validação é previsto usando somente anos anteriores. O conjunto de 2026 não é usado na validação v6 nem na seleção de modelos. As previsões OOF da v6 também permitem à avaliação v7 comparar calibração isotônica, combinações e limiares sob diferentes custos de falsos positivos e falsos negativos.
+
+O adaptador `SimpleMeanCalibratedEnsemble`, em `src/models/weather_ensemble.py`, aplica a engenharia de atributos, obtém as probabilidades dos três modelos, calibra cada uma e calcula a média simples, com pesos de 1/3. O limiar 0,50 do pacote é provisório.
+
+## Organização do código
 
 ```text
-config.py                         Configuração e caminhos
-scripts/prepare_weather.py        Preparação e criação do alvo
+config.py                         Configuração e caminhos locais
+scripts/prepare_weather.py        Preparação da tabela e do alvo
 scripts/train_v6.py               Treinamento e validação temporal
 scripts/evaluate_test.py          Avaliação v7 opcional
-scripts/package_weather_model.py  Calibração e empacotamento
-src/models/weather_ensemble.py    Engenharia de features e inferência
+scripts/package_weather_model.py  Empacotamento do modelo e manifesto
+src/models/weather_ensemble.py    Engenharia de atributos e inferência
 tests/                            Testes automatizados
 reports/training/                 Relatórios v6 e v7
 ```
 
-## Escopo e limitações
+## Limitações
 
-Este é um pipeline experimental e retrospectivo, não um serviço de previsão operacional. A API, o banco de dados e a interface pertencem a outro projeto. A disponibilidade dos dados no instante da previsão, a semântica exata da chuva, os custos dos erros e um limiar operacional ainda precisam ser validados. O teste de 2026 não foi usado para seleção na v6; não deve ser reutilizado para escolher parâmetros. As imagens GOES são uma linha exploratória separada e não entram neste modelo.
+Este é um pipeline experimental retrospectivo, não um serviço de previsão operacional. A semântica temporal de `rain`, a disponibilidade das entradas no momento da previsão, os custos dos erros e um limiar operacional ainda precisam ser validados. O repositório não implementa a API, o banco de dados ou a interface. As imagens GOES são exploratórias e não entram no modelo atual.
+
+Os dados e artefatos locais ficam sob `data/`, ignorado pelo Git; portanto, cada pessoa precisa receber o CSV separadamente e configurar seu próprio caminho no `.env`.
