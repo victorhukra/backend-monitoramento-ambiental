@@ -50,15 +50,15 @@ CV_YEARS = (2022, 2023, 2024, 2025)
 SEEDS = (17, 42, 2025)
 
 # As 7 features finais esperadas pelos modelos
-FEATURES = (
+FEATURES = [
     'temperature_2m',
     'relative_humidity_2m',
     'pressure_msl',
     'cloud_cover',
     'temp_humidity',
     'pressure_diff',
-    'hour_of_day',
-)
+    'hour_of_day'
+]
 
 
 def load_table(path: Path) -> pd.DataFrame:
