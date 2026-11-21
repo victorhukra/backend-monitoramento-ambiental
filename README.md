@@ -1,177 +1,177 @@
-# Previsão de chuva em Londrina
+# Módulo de Modelagem Preditiva e Inteligência Artificial
 
-Nosso objetivo é construir um MVP que receba dados meteorológicos e estime **se vai chover na próxima hora**. A equipe quer integrar dados → modelo → API → banco → tela, com código simples e compreensível.
+**Previsão de Chuva em Curto Prazo — Londrina/PR**
 
-## Onde estamos
+Este repositório contém o pipeline de engenharia de dados, treinamento, validação temporal, calibração probabilística e empacotamento do modelo preditivo de Machine Learning para detecção de chuva horária ($T+1h$).
 
-- Auditoria e análise exploratória dos dados concluídas.
-- Tabela experimental preparada: **59.159 registros**, com temperatura, umidade, pressão e nebulosidade como entradas.
-- Seis ciclos de treinamento documentados. A v6 compara três Random Forests e combinações; a avaliação v7 usa protocolo temporal aninhado para calibrar probabilidades, ajustar pesos e limiares.
-- O período de 2026 ficou fora da seleção v5. Ele já havia sido consultado em ciclos anteriores e não representa uma avaliação independente.
-- Versão v6 definida para esta integração: média simples dos três Random Forests v6, calibradores isotônicos, limiar inicial 0,50 e pacote do modelo e manifesto locais. Contratos da interface, da retaguarda e do banco atualizados; API, banco e tela ainda não estão implementados.
+---
 
-O Random Forest balanceado identifica mais eventos de chuva e também gera mais alarmes falsos. Ainda não há modelo escolhido para operação nem serviço de previsão em tempo real. As imagens GOES ficam para uma evolução futura; você não precisa baixar o acervo para trabalhar no MVP meteorológico atual.
+## 1. Visão Geral do Sistema
 
-**Limitação importante:** adotamos a hipótese de que a chuva registrada em T+1h representa a hora seguinte a T. Essa interpretação e a disponibilidade dos dados no instante da previsão ainda precisam de confirmação na origem. Por enquanto, o estudo é histórico e experimental.
+* **Problema:** A estimativa de chuva em curto prazo a partir de medições de superfície apresenta forte desbalanceamento de classes (ocorrência histórica em menos de 10% a 17% dos registros horários).
+* **Objetivo:** A partir de observações atmosféricas locais na hora de referência ($T$) e na hora anterior ($T-1h$), calcular a probabilidade calibrada de precipitação acumulada na hora seguinte ($T+1h$).
+* **Entrega:** O pacote serializado `weather_ensemble.joblib` e o manifesto `manifest.json`, integrados aos serviços da API para disponibilização das previsões.
 
-## 1. Preparar o ambiente
+---
 
-Você precisa de **Git, Python 3.13 e acesso ao repositório privado**. O pacote candidato foi gerado com Python 3.13.3 e as versões fixadas em `requirements.txt`; para reproduzir o ambiente registrado no manifesto, use essas mesmas versões. No terminal PowerShell:
+## 2. Arquitetura do Modelo
 
-```powershell
+O modelo preditivo adota um **Ensemble Calibrado de Média Simples**, combinando três famílias de Random Forest com 400 árvores e folha mínima 10:
+
+1. **`original`**: Ajustado na distribuição natural das classes (`class_weight=None`), priorizando alta precisão e baixa taxa de alarmes falsos.
+2. **`balanced`**: Ajustado com pesos inversamente proporcionais às frequências de classe (`class_weight='balanced'`), aumentando a sensibilidade na detecção de eventos raros.
+3. **`balanced_subsample`**: Pesos balanceados recalculados dinamicamente em cada partição de bootstrap (`class_weight='balanced_subsample'`).
+
+```mermaid
+flowchart TD
+    Raw[Medições em T e Pressão em T-1h] --> FE[Engenharia de Atributos: 7 Features]
+    FE --> M1[Random Forest: Original]
+    FE --> M2[Random Forest: Balanced]
+    FE --> M3[Random Forest: Balanced Subsample]
+    
+    M1 --> C1[Calibração Isotônica 1]
+    M2 --> C2[Calibração Isotônica 2]
+    M3 --> C3[Calibração Isotônica 3]
+    
+    C1 --> Ens[Média Ponderada: 1/3 para cada modelo]
+    C2 --> Ens
+    C3 --> Ens
+    
+    Ens --> Prob[Probabilidade Final Calibrada]
+    Prob --> Dec{Probabilidade >= 0.50?}
+    Dec -->|Sim| R1[Chuva Prevista: TRUE]
+    Dec -->|Não| R0[Chuva Prevista: FALSE]
+```
+
+### Contrato de Variáveis (7 Features)
+* **Entradas Brutas (instantes $T$ e $T-1h$):**
+  * `temperature_2m` (Temperatura do ar a 2m)
+  * `relative_humidity_2m` (Umidade relativa do ar a 2m)
+  * `pressure_msl` (Pressão atmosférica ao nível do mar no instante $T$)
+  * `cloud_cover` (Cobertura total de nuvens)
+  * `pressure_msl_previous_hour` (Pressão atmosférica no instante anterior $T-1h$)
+* **Variáveis Derivadas:**
+  * `temp_humidity`: Interação térmica e higrométrica ($Temperatura \times Umidade$).
+  * `pressure_diff`: Tendência barométrica horária ($Pressão(T) - Pressão(T-1h)$).
+  * `hour_of_day`: Ciclo diurno local (0 a 23h no fuso `America/Sao_Paulo`).
+
+---
+
+## 3. Estrutura de Diretórios
+
+O repositório está organizado para manter apenas os módulos ativos do pipeline de produção:
+
+```text
+.
+├── config.py                               # Configurações de caminhos e fuso horário
+├── requirements.txt                         # Dependências do ambiente Python
+├── README.md                                # Documentação técnica do pipeline
+│
+├── scripts/                                # Scripts executáveis do pipeline
+│   ├── prepare_weather.py                  # Formatação da base histórica e definição do alvo T+1h
+│   ├── train_v6.py                         # Validação cruzada rolling-year, treino dos 3 RFs e ensemble
+│   ├── evaluate_test.py                    # Avaliação aninhada v7, calibração e análise de custos
+│   ├── package_weather_model.py            # Empacotamento do modelo final em .joblib e manifest.json
+│   └── check_staged.py                     # Hook de validação do repositório Git
+│
+├── src/
+│   └── models/
+│       ├── __init__.py
+│       └── weather_ensemble.py             # Classe SimpleMeanCalibratedEnsemble (inferência e features)
+│
+├── reports/
+│   └── training/
+│       ├── sixth_training_report.md        # Relatório de validação e métricas do treino v6
+│       └── seventh_training_report.md      # Relatório de calibração isotônica e custos v7
+│
+├── tests/                                  # Suíte de testes unitários
+│   ├── test_onboarding.py                  # Teste de conformidade de arquivos
+│   ├── test_prepare_weather.py             # Teste de formatação e integridade dos dados
+│   └── test_train.py                       # Teste do ensemble, features e treinamento
+│
+└── docs/                                   # Documentação técnica
+    ├── prepare_weather.md                  # Especificação das regras de tratamento da base
+    └── legacy/                             # Histórico técnico e relatórios anteriores arquivados
+```
+
+---
+
+## 4. Requisitos e Instalação
+
+* **Python:** 3.13+
+* **Git**
+
+```bash
+# 1. Clonar o repositório
 git clone https://github.com/victorhukra/backend-monitoramento-ambiental.git
 cd backend-monitoramento-ambiental
-py -3.13 -m venv .venv
+
+# 2. Criar e ativar o ambiente virtual
+python -m venv .venv
+# Windows:
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-git config core.hooksPath .githooks
-Copy-Item .env.example .env
+# Linux/macOS:
+source .venv/bin/activate
+
+# 3. Instalar dependências
+pip install -r requirements.txt
+
+# 4. Configurar arquivo de ambiente
+cp .env.example .env
 ```
 
-Se já tem o projeto, use sua pasta existente. Copie `.env.example` somente se ainda não tiver `.env`, para preservar seus caminhos locais.
+---
 
-No Linux/macOS, use `python3.13 -m venv .venv`, `source .venv/bin/activate` e `cp .env.example .env`. Os comandos Python seguintes são iguais.
+## 5. Execução do Pipeline
 
-As dependências fixadas em `requirements.txt` incluem pandas, NumPy, Matplotlib, scikit-learn e joblib. Os ambientes local e de validação estão com dependências consistentes (`pip check` sem conflitos); a equipe deve repetir a instalação limpa no computador de destino.
+### Passo 1: Preparação da Base
+Valida o domínio físico das medições meteorológicas, localiza os timestamps no fuso `America/Sao_Paulo` e cria o dataset com o alvo `rain_next_hour`:
 
-## 2. Indicar onde está o CSV
+```bash
+python scripts/prepare_weather.py
+```
+*Arquivo gerado:* `data/processed/weather_training.csv`
 
-Solicite à equipe o arquivo `dataset_weather.csv`: ele **não vem no GitHub**. Guarde-o fora do repositório, por exemplo em `D:/dados-goes/`, e ajuste estas linhas no seu `.env`:
+### Passo 2: Treinamento e Validação Cruzada (v6)
+Aplica validação cruzada temporal em janela expansiva (*rolling-year* de 2022 a 2025) com 3 sementes aleatórias para comparar as estratégias e ajustar os modelos finais:
 
-```dotenv
-WEATHER_CSV_PATH=D:/dados-goes/dataset_weather.csv
-WEATHER_TRAINING_PATH=data/processed/weather_training.csv
+```bash
+python scripts/train_v6.py
+```
+*Saídas geradas:* Métricas por partição/semente, previsões fora da amostra (OOF), modelos `.joblib` congelados e o relatório `reports/training/sixth_training_report.md`.
+
+### Passo 3: Avaliação de Calibração e Limiares Operacionais (v7)
+Avalia calibração não-paramétrica (Isotônica) e simulações de matriz de custo entre Falsos Positivos e Falsos Negativos:
+
+```bash
+python scripts/evaluate_test.py
+```
+*Saídas geradas:* Matriz de complementaridade de erros, resumo de custos operacionais e `reports/training/seventh_training_report.md`.
+
+### Passo 4: Empacotamento do Modelo
+Ajusta os calibradores isotônicos com as previsões OOF, valida a paridade da engenharia de features e serializa o artefato consumido pela API:
+
+```bash
+python scripts/package_weather_model.py
+```
+*Saídas geradas:* `weather_ensemble.joblib` e `manifest.json`.
+
+---
+
+## 6. Testes Automatizados
+
+Para executar a suíte de testes unitários:
+
+```bash
+python -m unittest discover tests
 ```
 
-Substitua o caminho pelo da sua máquina. Caminhos relativos partem da raiz do projeto. As opções GOES do `.env` podem ficar como estão para esta etapa.
+---
 
-## 3. Preparar a tabela
+## 7. Integração com a API
 
-Na raiz do projeto, com o ambiente ativo:
+O pacote serializado (`weather_ensemble.joblib` e `manifest.json`) é consumido pelo backend Flask da aplicação integrada (`projeto-monitoramento-ambiental`):
 
-```powershell
-python -B scripts/prepare_weather.py --plot
-```
-
-O script lê o CSV original, associa cada horário à chuva de **exatamente uma hora depois** e grava os resultados em `data/processed/`:
-
-| Arquivo | Para que serve |
-|---|---|
-| `weather_training.csv` | Quatro entradas, horário de referência, horário do alvo e classe de chuva |
-| `weather_training.json` | Contagens, parâmetros e identificação da fonte |
-| `weather_training_excluded.csv` | Linhas que não puderam entrar e seus motivos |
-| `weather_training_preview.csv` | Dez primeiras linhas para conferência |
-| `weather_training.png` | Gráfico das quantidades com e sem chuva |
-
-O original permanece intacto. O script não divide períodos nem treina um modelo. Sem `--plot`, não gera o gráfico.
-
-**Se a tabela já existe, não é necessário gerá-la novamente.** O script evita sobrescritas; para uma nova versão, use `--output data/processed/weather_training_v2.csv`.
-
-Entenda cada passo em [Preparação da tabela](docs/prepare_weather.md). A preparação não treina modelos; ela só constrói e documenta a tabela de exemplos.
-
-## 4. Treinar e comparar os modelos
-
-O fluxo mais recente está no script v6; a v5 permanece documentada para comparação. A v4 e o avaliador histórico foram arquivados em `scripts/archive/`; `scripts/evaluate_test.py` é o ponto de entrada atual de avaliação. Com a tabela disponível e o ambiente ativado, execute:
-
-```powershell
-python -B scripts/train_v6.py
-```
-
-A v6 compara os modelos original, `balanced` e `balanced_subsample` (400 árvores, folha mínima 10) e quatro médias ponderadas de probabilidades, em partições temporais de 2022–2025 com três sementes. Ela grava métricas, previsões fora da amostra, três joblibs e manifesto; não avalia 2026. Consulte o [relatório v6](reports/training/sixth_training_report.md). O procedimento completo para recriar o pacote do modelo está na seção [Recriar o candidato de integração v6](#recriar-o-candidato-de-integração-v6); os artefatos locais ficam em `data/experiments/`, ignorados pelo Git. A v5 segue disponível em [seu relatório](reports/training/fifth_training_report.md). Para a avaliação aninhada da v6, execute `python -B scripts/evaluate_test.py`; veja o [relatório v7](reports/training/seventh_training_report.md). Os artefatos ficam em `data/experiments/`, ignorados pelo Git.
-
-### Recriar o candidato de integração v6
-
-Com o CSV original disponível e `WEATHER_CSV_PATH` configurado no `.env`, um clone limpo pode gerar os artefatos usados pelo candidato. Use o Python 3.13.3 e as versões fixadas em `requirements.txt` para reproduzir o ambiente registrado no manifesto. Se a tabela preparada ainda não existir, gere-a primeiro:
-
-```powershell
-python -B scripts/prepare_weather.py
-```
-
-Depois execute o treinamento com uma pasta de saída nova e empacote o candidato a partir dela:
-
-```powershell
-python -B scripts/train_v6.py --output-dir data/experiments/weather_v6_group_reproduction
-python -B scripts/package_weather_model.py --v6-dir data/experiments/weather_v6_group_reproduction --output-dir data/experiments/weather_v6_integration_candidate_group_reproduction
-```
-
-O treino gera os três joblibs finais e as previsões fora da amostra que o empacotador usa para ajustar os calibradores isotônicos. O pacote final do modelo, os calibradores e o manifesto ficam na segunda pasta. Os dois caminhos devem ser novos; se já existirem, escolha outros nomes. `data/experiments/` é ignorado pelo Git, então cada grupo gera os próprios arquivos localmente. Use exatamente o mesmo CSV, tabela processada e versões das dependências para comparar artefatos. Este procedimento reproduz o candidato técnico; não constitui nova avaliação independente nem aprovação operacional.
-
-Para fazer a avaliação retrospectiva dos joblibs salvos de uma execução v5, o comando explícito é:
-
-```powershell
-python -B scripts/archive/train_v5.py --evaluate-test --output-dir data/experiments/weather_v5_20261104T120000Z
-```
-
-O script registra métricas e previsões no experimento e impede a repetição da avaliação na mesma pasta. Este período já foi consultado em ciclos anteriores, então seus resultados não são independentes nem devem orientar a seleção.
-
-Cada execução exige uma pasta de saída nova e não sobrescreve experimentos existentes. A execução completa pode levar vários minutos. As pastas em `data/experiments/` são locais e excluídas do Git; não tente adicioná-las ao repositório.
-
-Relatórios dos treinamentos:
-
-- [Relatório da avaliação aninhada v7](reports/training/seventh_training_report.md)
-- [Avaliador atual](scripts/evaluate_test.py)
-- [Relatório da comparação v6](reports/training/sixth_training_report.md)
-- [Relatório da comparação v5](reports/training/fifth_training_report.md)
-- [Detalhe técnico da v4](reports/training/fourth_training_report.md)
-- [Código de comparação v6](scripts/train_v6.py)
-- [Empacotador do candidato de integração](scripts/package_weather_model.py)
-- [Adaptador de inferência e atributos](src/models/weather_ensemble.py)
-- [Código de comparação v5](scripts/archive/train_v5.py)
-- [Avaliador histórico arquivado](scripts/archive/evaluate_legacy_test.py)
-- [Treinamento histórico v4 arquivado](scripts/archive/train_v4.py)
-
-## 5. Executar os testes
-
-```powershell
-python -B -m unittest discover -s tests -v
-```
-
-Os testes usam exemplos pequenos e não exigem o CSV real nem as imagens GOES.
-
-Na revisão de 04/11/2026, a suíte completa passou em **51 testes**; `pip check` também passou nos ambientes `.venv` e `.venv-validacao`. Os testes não validam a semântica meteorológica da fonte nem demonstram desempenho operacional.
-
-## Onde encontrar cada coisa
-
-| Local | Conteúdo |
-|---|---|
-| `config.py` | Caminhos, fuso e nomes das quatro entradas |
-| `scripts/prepare_weather.py` | Preparação da tabela do MVP |
-| `scripts/archive/train_v5.py` | Comparação temporal repetida e registro de artefatos |
-| `scripts/archive/` | Versões históricas dos scripts de treinamento |
-| `tests/` | Verificações do código |
-| `reports/project/` | Contratos para serviço de retaguarda, interface e Banco |
-| `reports/project/` | Propostas e guia para as próximas decisões |
-| `reports/training/` | Relatórios dos ciclos experimentais |
-| `src/data/` | Auditoria, análise exploratória e investigação da origem |
-| `src/features/` | Investigação e piloto GOES |
-| `data/` | Dados e resultados locais, ignorados pelo Git |
-
-Para alinhar as equipes: [serviço de retaguarda](reports/project/alinhamento_tres_equipes_integracao.md), [interface](reports/project/demandas_frontend_busca_e_previsao.md) e [Banco de Dados](reports/project/demandas_banco_busca_e_previsao.md). Esses documentos são contratos propostos; não significam que os serviços já estejam implementados. A tabela `predictions` proposta para o banco guarda previsões da API e é diferente da tabela de treinamento.
-
-## Colaborar sem misturar as tarefas
-
-Use `main` para código revisado e uma branch `feature/nome-curto` para cada tarefa:
-
-```powershell
-git switch main
-git pull --ff-only
-git switch -c feature/nome-curto
-# Faça suas alterações e execute os testes.
-git add caminho/do/arquivo.py
-python scripts/check_staged.py
-# Só continue se a verificação passar; confira o conteúdo abaixo.
-git diff --cached
-git commit -m "feat: descrever a alteração"
-git push -u origin feature/nome-curto
-```
-
-Abra um solicitação de integração para `main` e peça a revisão de um colega. Cada pessoa mantém seus próprios caminhos no `.env`.
-
-**No Git entram somente código e documentação.** CSV, NPZ, ZIP, amostras, resultados gerados, ambientes e credenciais ficam fora. O `.gitignore` e o hook ajudam a conferir isso; não use `git add -f` para incluir dados nem desative o hook para contornar uma rejeição. Tokens e senhas nunca devem entrar no código ou na documentação.
-
-## Material de apoio
-
-- [Estado detalhado e histórico do projeto](STATUS.md).
-- [README original do conjunto de dados](docs/dataset/README.md), preservado.
-- [Utilitários GOES](docs/goes_development.md): amostra local e leitura seletiva, para quem precisar investigar imagens. O acervo tem cerca de 73,8 GiB; não descompacte tudo.
-- [Documentação histórica](docs/history/README_pre_github.md): reprodução das análises anteriores. Alguns resultados locais citados não acompanham o clone.
+* A classe `SimpleMeanCalibratedEnsemble` (`src/models/weather_ensemble.py`) é carregada na inicialização do serviço pelo módulo `model_service.py`.
+* O `model_service.py` valida o hash SHA-256 do arquivo e a ordem das 7 features contra o `manifest.json`.
+* A cada requisição HTTP em `POST /predict`, os dados meteorológicos em $T$ e $T-1h$ são consultados no banco pelo `weather_service.py` e repassados ao método `predict_one(...)`.

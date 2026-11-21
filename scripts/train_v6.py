@@ -38,9 +38,92 @@ from sklearn.metrics import (
 
 # Inclusão da raiz do projeto no PATH para imports locais
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from config import ROOT, settings
-from scripts.archive.train_v4 import TARGET, load_table
-from scripts.archive.train_v5 import CV_YEARS, FEATURES, SEEDS, temporal_fold
+from config import ROOT, WEATHER_FEATURES, WEATHER_TIMEZONE, settings
+
+# Nome da coluna alvo (chuva acumulada na próxima hora > 0)
+TARGET = 'rain_next_hour'
+
+# Anos das partições cronológicas da validação cruzada
+CV_YEARS = (2022, 2023, 2024, 2025)
+
+# Sementes aleatórias para reprodutibilidade das árvores
+SEEDS = (17, 42, 2025)
+
+# As 7 features finais esperadas pelos modelos
+FEATURES = (
+    'temperature_2m',
+    'relative_humidity_2m',
+    'pressure_msl',
+    'cloud_cover',
+    'temp_humidity',
+    'pressure_diff',
+    'hour_of_day',
+)
+
+
+def load_table(path: Path) -> pd.DataFrame:
+    """Carrega a tabela de dados processada e realiza a engenharia de atributos.
+
+    Adiciona as features derivadas:
+    - temp_humidity: interação temperatura x umidade relativa
+    - pressure_diff: variação barométrica em relação à hora anterior
+    - hour_of_day: hora local (0 a 23) no fuso America/Sao_Paulo
+    """
+    path = Path(path).resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f'Tabela de treinamento não encontrada: {path}')
+
+    frame = pd.read_csv(path)
+    required = ['time', *WEATHER_FEATURES, 'target_time', TARGET]
+    missing = set(required) - set(frame.columns)
+    if missing:
+        raise ValueError(f'Colunas ausentes na tabela: {sorted(missing)}')
+    if frame.empty:
+        raise ValueError('A tabela de treinamento está vazia')
+
+    for column in ['time', 'target_time']:
+        frame[column] = pd.to_datetime(frame[column], errors='raise', utc=True)
+        if frame[column].isna().any():
+            raise ValueError(f'Timestamp ausente em {column}')
+
+    if frame['time'].duplicated().any():
+        raise ValueError('Existem timestamps duplicados')
+
+    target_series = pd.to_numeric(frame[TARGET], errors='raise')
+    if target_series.isna().any() or not target_series.isin([0, 1]).all():
+        raise ValueError(f'{TARGET} deve conter apenas 0 e 1')
+    frame[TARGET] = target_series.astype('int8')
+
+    for column in WEATHER_FEATURES:
+        frame[column] = pd.to_numeric(frame[column], errors='raise')
+
+    # Ordenação cronológica estrita antes de calcular lags
+    frame = frame.sort_values('time').reset_index(drop=True)
+
+    # Engenharia de atributos
+    frame['temp_humidity'] = frame['temperature_2m'] * frame['relative_humidity_2m']
+    frame['pressure_diff'] = frame['pressure_msl'].diff().fillna(0.0)
+    frame['hour_of_day'] = frame['time'].dt.tz_convert(WEATHER_TIMEZONE).dt.hour
+
+    return frame
+
+
+def temporal_fold(frame: pd.DataFrame, year: int) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Separa o conjunto de desenvolvimento em treino (passado) e validação (ano corrente).
+    
+    Garante que nenhum registro futuro ou com alvo atravessando a fronteira do ano
+    seja utilizado no treino (ausência total de data leakage).
+    """
+    start = pd.Timestamp(f'{year}-01-01', tz=WEATHER_TIMEZONE).tz_convert('UTC')
+    end = pd.Timestamp(f'{year + 1}-01-01', tz=WEATHER_TIMEZONE).tz_convert('UTC')
+
+    train = frame[frame['target_time'] < start]
+    valid = frame[(frame['time'] >= start) & (frame['target_time'] < end)]
+
+    if train.empty or valid.empty or train[TARGET].nunique() < 2 or valid[TARGET].nunique() < 2:
+        raise ValueError(f'Dados insuficientes para o fold de {year}')
+
+    return train, valid
 
 # Configurações de pesos de classe para as três famílias de modelos
 MODELS: Dict[str, Dict[str, Any]] = {

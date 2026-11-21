@@ -23,8 +23,7 @@ from sklearn.isotonic import IsotonicRegression
 # Inclusão da raiz do projeto para imports locais
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import ROOT, settings
-from scripts.archive.train_v4 import load_table
-from scripts.archive.train_v5 import FEATURES
+from scripts.train_v6 import FEATURES, load_table
 from src.models.weather_ensemble import (
     MODEL_NAMES,
     MODEL_VERSION,
