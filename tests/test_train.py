@@ -48,7 +48,7 @@ class TrainV6Tests(unittest.TestCase):
 
     def test_features_contract(self):
         """Garante que a lista de features contenha as 4 variáveis brutas e as 3 derivadas."""
-        expected = (
+        expected = [
             'temperature_2m',
             'relative_humidity_2m',
             'pressure_msl',
@@ -56,7 +56,7 @@ class TrainV6Tests(unittest.TestCase):
             'temp_humidity',
             'pressure_diff',
             'hour_of_day',
-        )
+        ]
         self.assertEqual(FEATURES, expected)
         self.assertEqual(TARGET, 'rain_next_hour')
 
